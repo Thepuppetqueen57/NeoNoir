@@ -90,61 +90,32 @@ draw_window:
     lodsw  ; y position
     mov dx, ax
     lodsw  ; width
-    mov bx, ax
+    mov di, ax
     lodsw  ; height
     mov bp, ax
 
     ; Draw window frame
     push cx
     push dx
-    mov di, 0xA000
-    mov ah, 0x0C   ; Draw pixel in graphics mode
-
-    ; Draw top border
-    mov cx, bx
-    mov dx, 0      ; Start at top
-    mov si, di
-.top_border:
+    mov ah, 0x0C   ; Draw pixel
     mov al, 0x0F   ; White color
-    int 0x10       ; Draw pixel
-    inc si
-    dec cx
-    jnz .top_border
+    int 0x10
 
-    ; Draw bottom border
-    mov cx, bx
-    mov dx, bp     ; Start at bottom
-    add dx, 200    ; Adjust for screen height
-    mov si, di
-.bottom_border:
-    mov al, 0x0F   ; White color
-    int 0x10       ; Draw pixel
-    inc si
-    dec cx
-    jnz .bottom_border
+    ; Draw horizontal lines
+    mov bx, di
+.top_bottom:
+    int 0x10
+    inc cx
+    dec bx
+    jnz .top_bottom
 
-    ; Draw left border
-    mov cx, bp
-    mov dx, 0      ; Start at left
-    mov si, di
-.left_border:
-    mov al, 0x0F   ; White color
-    int 0x10       ; Draw pixel
-    inc si
-    dec cx
-    jnz .left_border
-
-    ; Draw right border
-    mov cx, bp
-    mov dx, bx     ; Start at right
-    add dx, 320    ; Adjust for screen width
-    mov si, di
-.right_border:
-    mov al, 0x0F   ; White color
-    int 0x10       ; Draw pixel
-    inc si
-    dec cx
-    jnz .right_border
+    ; Draw vertical lines
+    mov bx, bp
+.left_right:
+    int 0x10
+    inc dx
+    dec bx
+    jnz .left_right
 
     ; Restore original position
     pop dx
@@ -152,14 +123,12 @@ draw_window:
 
     ; Draw title bar
     mov al, 0x01   ; Blue color
-    mov bx, 10     ; Title bar width
-    mov cx, bx
-    mov dx, 0      ; Start at top
-    mov si, di
+    mov bx, di
+    dec bx
 .title_bar:
-    int 0x10       ; Draw pixel
-    inc si
-    dec cx
+    inc cx
+    int 0x10
+    dec bx
     jnz .title_bar
 
     ; Draw title text
