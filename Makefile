@@ -18,5 +18,8 @@ $(TARGET_ISO): $(TARGET_BIN)
 	mkdir -p $(ISO_DIR)
 	dd if=$(TARGET_BIN) of=$(TARGET_ISO) conv=notrunc
 
+run:
+	qemu-system-x86_64 bin/iso/NoirOS-X16.iso
+
 clean:
 	rm -rf $(BIN_DIR)
