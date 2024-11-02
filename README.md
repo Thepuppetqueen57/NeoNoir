@@ -1,6 +1,6 @@
 # NoirOS
 
-NoirOS is a simple operating system written in assembly.
+NoirOS is a simple operating system written in C.
 
 ## Running the OS
 
@@ -10,7 +10,7 @@ Run:
 make run
 ```
 
-Make sure to have nasm and qemu installed first.
+Make sure to have nasm, gcc and qemu installed first.
 
 If you just want the iso and you dont to run it then run `make` instead.
 

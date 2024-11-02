@@ -1,7 +1,9 @@
 /.vscode/
 /.idea/
 
-/bin/
+/build/
 
 *.log
 *.var
+
+iso/boot/noiros.bin

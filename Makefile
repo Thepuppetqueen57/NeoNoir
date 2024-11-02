@@ -1,27 +1,45 @@
-TARGET = NoirOS-X16
-BOOTASM = src/boot.asm
-BIN_DIR = bin
-ISO_DIR = $(BIN_DIR)/iso
-TARGET_BIN = $(BIN_DIR)/$(TARGET)
-TARGET_ISO = $(ISO_DIR)/$(TARGET).iso
+# Compiler and linker settings
+CC = gcc
+AS = nasm
+CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -c
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -T linker.ld
 
-all: $(TARGET_ISO)
+# Object files
+OBJ = build/boot.o build/kernel.o
 
-$(TARGET_BIN): $(BIN_DIR)/boot.bin
-	cat $^ > $@
+# Default target
+all: build/noiros.iso
 
-$(BIN_DIR)/boot.bin: $(BOOTASM)
-	mkdir -p $(BIN_DIR)
-	nasm -f bin $< -o $@
+# Create build directory
+build:
+	mkdir -p build
+	mkdir -p iso/boot/grub
 
-$(TARGET_ISO): $(TARGET_BIN)
-	mkdir -p $(ISO_DIR)
-	dd if=$(TARGET_BIN) of=$(TARGET_ISO) conv=notrunc
+# Compile kernel
+build/kernel.o: src/kernel.c
+	$(CC) $(CFLAGS) src/kernel.c -o build/kernel.o
+
+# Compile boot code
+build/boot.o: src/boot.asm
+	$(AS) $(ASFLAGS) src/boot.asm -o build/boot.o
+
+# Link everything together
+build/noiros.bin: $(OBJ)
+	ld $(LDFLAGS) $(OBJ) -o build/noiros.bin
+
+# Create ISO
+build/noiros.iso: build/noiros.bin
+	cp build/noiros.bin iso/boot/
+	grub-mkrescue -o build/noiros.iso iso
+
+# Clean build files
+clean:
+	rm -rf build/*
+	rm -f iso/boot/noiros.bin
 
 run:
-	@make
-	qemu-system-x86_64 bin/iso/NoirOS-X16.iso
-	@make clean
+	qemu-system-x86_64 -cdrom build/noiros.iso
+	make clean
 
-clean:
-	rm -rf $(BIN_DIR)
+.PHONY: all clean
