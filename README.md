@@ -2,15 +2,17 @@
 
 NoirOS is a simple operating system written in assembly.
 
-## Building the OS
+## Running the OS
 
 Run:
 
 ```bash
-make
+make run
 ```
 
-And then the OS ISO will be in `bin/iso`.
+Make sure to have nasm and qemu installed first.
+
+If you just want the iso and you dont to run it then run `make` instead.
 
 ## License
 
