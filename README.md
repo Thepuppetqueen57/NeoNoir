@@ -10,7 +10,7 @@ Run:
 make run
 ```
 
-Make sure to have nasm, gcc and qemu installed first.
+Make sure to have nasm, gcc, xorriso, and qemu installed first.
 
 If you just want the iso and you dont to run it then run `make` instead.
 
