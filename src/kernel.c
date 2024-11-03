@@ -205,7 +205,7 @@ void shutdown() {
     // Try another method
     outw(SHUTDOWN_PORT3, 0x2000);
     
-    // If we get here, shutdown failed
+    // If we get here , shutdown failed
     print("Shutdown failed. System halted.\n");
     while(1) {
         asm volatile("hlt");
@@ -239,22 +239,58 @@ void echo(const char* str) {
     print("\n");
 }
 
+void print_system_info() {
+    print("NoirOS v1.0\n");
+    print("Architecture: x86\n");
+    print("Memory: 640KB Base Memory\n");
+    print("Display: VGA Text Mode 80x25\n");
+}
+
+void whoami() {
+    print("root\n");
+}
+
+void hostname() {
+    print("noiros\n");
+}
+
+void print_banner() {
+    print("    _   __      _      ____  _____ \n");
+    print("   / | / /___  (_)____/ __ \\/ ___/ \n");
+    print("  /  |/ / __ \\/ / ___/ / / /\\__ \\ \n");
+    print(" / /|  / /_/ / / /  / /_/ /___/ / \n");
+    print("/_/ |_/\\____/_/_/   \\____//____/  \n");
+    print("\nWelcome to NoirOS!\n");
+}
+
 void execute_command(const char* command) {
     if (strcmp(command, "clear") == 0) {
         clear_screen();
     } else if (strcmp(command, "help") == 0) {
         print("Available commands:\n");
-        print("  clear  - Clear the screen\n");
-        print("  help   - Show this help message\n");
+        print("  clear    - Clear the screen\n");
+        print("  help     - Show this help message\n");
         print("  shutdown - Power off the system\n");
         print("  reboot   - Restart the system\n");
         print("  echo [text] - Display the text\n");
+        print("  whoami   - Display current user\n");
+        print("  hostname - Display system hostname\n");
+        print("  uname    - Display system information\n");
+        print("  banner   - Display NoirOS banner\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
         reboot();
     } else if (strncmp(command, "echo ", 5) == 0) {
         echo(command + 5);
+    } else if (strcmp(command, "whoami") == 0) {
+        whoami();
+    } else if (strcmp(command, "hostname") == 0) {
+        hostname();
+    } else if (strcmp(command, "uname") == 0) {
+        print_system_info();
+    } else if (strcmp(command, "banner") == 0) {
+        print_banner();
     } else {
         print("Unknown command: ");
         print(command);
@@ -265,7 +301,7 @@ void execute_command(const char* command) {
 void shell() {
     char command[256];
     while (1) {
-        print("NoirOS> ");
+        print("root@noiros /> ");
         read_line(command, sizeof(command));
         execute_command(command);
     }
@@ -273,7 +309,7 @@ void shell() {
 
 int kernel_main() {
     clear_screen();
-    print("Welcome to NoirOS!\n");
+    print_banner();
     print("Type 'help' for a list of commands.\n\n");
     shell();
     return 0;
