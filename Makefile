@@ -1,7 +1,8 @@
 # Compiler and linker settings
 CC = gcc
 AS = nasm
-CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -c
+CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
+         -nostartfiles -nodefaultlibs -Wall -Wextra -c
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T linker.ld
 
@@ -29,7 +30,7 @@ build/noiros.bin: $(OBJ)
 	ld $(LDFLAGS) $(OBJ) -o build/noiros.bin
 
 # Create ISO
-build/noiros.iso: build/noiros.bin
+build/noiros.iso: build build/noiros.bin
 	cp build/noiros.bin iso/boot/
 	grub-mkrescue -o build/noiros.iso iso
 
@@ -38,8 +39,7 @@ clean:
 	rm -rf build/*
 	rm -f iso/boot/noiros.bin
 
-run:
-	qemu-system-x86_64 -cdrom build/noiros.iso
-	make clean
+run: build/noiros.iso
+	qemu-system-i386 -cdrom build/noiros.iso
 
-.PHONY: all clean
+.PHONY: all clean run
