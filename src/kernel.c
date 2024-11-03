@@ -2,6 +2,12 @@
 #define VGA_HEIGHT 25
 #define VGA_MEMORY 0xB8000
 
+#define KEYBOARD_PORT 0x60
+#define KEYBOARD_STATUS 0x64
+#define SHUTDOWN_PORT1 0xB004
+#define SHUTDOWN_PORT2 0x2000
+#define SHUTDOWN_PORT3 0x604
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 
@@ -12,6 +18,10 @@ int cursor_y = 0;
 // IO functions
 void outb(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+void outw(uint16_t port, uint16_t val) {
+    asm volatile ("outw %0, %1" : : "a"(val), "Nd"(port));
 }
 
 uint8_t inb(uint16_t port) {
@@ -26,6 +36,22 @@ int strcmp(const char* s1, const char* s2) {
         s2++;
     }
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
+int strlen(const char* str) {
+    int len = 0;
+    while (str[len]) len++;
+    return len;
+}
+
+int strncmp(const char* s1, const char* s2, int n) {
+    while (n && *s1 && (*s1 == *s2)) {
+        ++s1;
+        ++s2;
+        --n;
+    }
+    if (n == 0) return 0;
+    return *(unsigned char*)s1 - *(unsigned char*)s2;
 }
 
 // VGA entry color
@@ -166,13 +192,69 @@ void read_line(char* buffer, int max_length) {
     buffer[i] = '\0';
 }
 
+void shutdown() {
+    print("Shutting down NoirOS...\n");
+    print("Please wait while the system powers off...\n");
+    
+    // Try ACPI shutdown
+    outw(SHUTDOWN_PORT1, 0x2000);
+    
+    // Try APM shutdown
+    outw(SHUTDOWN_PORT2, 0x0);
+    
+    // Try another method
+    outw(SHUTDOWN_PORT3, 0x2000);
+    
+    // If we get here, shutdown failed
+    print("Shutdown failed. System halted.\n");
+    while(1) {
+        asm volatile("hlt");
+    }
+}
+
+void reboot() {
+    print("Rebooting NoirOS...\n");
+    print("Please wait while the system restarts...\n");
+    
+    // Wait for keyboard buffer to empty
+    uint8_t temp;
+    do {
+        temp = inb(KEYBOARD_STATUS);
+        if (temp & 1) {
+            inb(KEYBOARD_PORT);
+        }
+    } while (temp & 2);
+    
+    // Send reset command
+    outb(KEYBOARD_STATUS, 0xFE);
+    
+    // If that didn't work, try alternative method
+    while(1) {
+        asm volatile("hlt");
+    }
+}
+
+void echo(const char* str) {
+    print(str);
+    print("\n");
+}
+
 void execute_command(const char* command) {
     if (strcmp(command, "clear") == 0) {
         clear_screen();
     } else if (strcmp(command, "help") == 0) {
         print("Available commands:\n");
-        print("  clear - Clear the screen\n");
-        print("  help - Show this help message\n");
+        print("  clear  - Clear the screen\n");
+        print("  help   - Show this help message\n");
+        print("  shutdown - Power off the system\n");
+        print("  reboot   - Restart the system\n");
+        print("  echo [text] - Display the text\n");
+    } else if (strcmp(command, "shutdown") == 0) {
+        shutdown();
+    } else if (strcmp(command, "reboot") == 0) {
+        reboot();
+    } else if (strncmp(command, "echo ", 5) == 0) {
+        echo(command + 5);
     } else {
         print("Unknown command: ");
         print(command);
