@@ -696,14 +696,14 @@ void print_banner() {
     print("  /  |/ / __ \\/ / ___/ / / /\\__ \\ \n");
     print(" / /|  / /_/ / / /  / /_/ /___/ / \n");
     print("/_/ |_/\\____/_/_/   \\____//____/  \n");
-    print("\nWelcome to NoirOS!\n");
+    print_colored("\nWelcome to NoirOS!\n", make_color(LIGHT_CYAN, BLACK));
 }
 
 void execute_command(const char *command) {
     if (strcmp(command, "clear") == 0) {
         clear_screen();
     } else if (strcmp(command, "help") == 0) {
-        print("Available commands:\n");
+        print_colored("Available commands:\n", make_color(LIGHT_CYAN, BLACK));
         print("  clear    - Clear the screen\n");
         print("  help     - Show this help message\n");
         print("  shutdown - Power off the system\n");
@@ -758,7 +758,7 @@ void shell() {
 int kernel_main() {
     clear_screen();
     print_banner();
-    print("Type 'help' for a list of commands.\n\n");
+    print_colored("Type 'help' for a list of commands.\n\n", make_color(LIGHT_MAGENTA, BLACK));
     shell();
     return 0;
 }
