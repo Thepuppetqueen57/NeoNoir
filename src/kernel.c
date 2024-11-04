@@ -238,24 +238,227 @@ void read_line(char *buffer, int max_length) {
     buffer[i] = '\0';
 }
 
-void shutdown() {
-    print("Shutting down NoirOS...\n");
-    print("Please wait while the system powers off...\n");
+#ifndef UINT_TYPES
+#define UINT_TYPES
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long long uint64_t;
+typedef char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+typedef long long int64_t;
+typedef unsigned int size_t;
+#endif
 
-    // Try ACPI shutdown
-    outw(SHUTDOWN_PORT1, 0x2000);
+// ACPI-related definitions
+#define ACPI_RSDP_SIGNATURE "RSD PTR "
+#define ACPI_FADT_SIGNATURE "FACP"
+#define ACPI_DSDT_SIGNATURE "DSDT"
 
-    // Try APM shutdown
-    outw(SHUTDOWN_PORT2, 0x0);
+// PCI-related definitions
+#define PCI_CONFIG_ADDRESS 0xCF8
+#define PCI_CONFIG_DATA 0xCFC
 
-    // Try another method
-    outw(SHUTDOWN_PORT3, 0x2000);
+// Keyboard controller
+#define KBC_DATA_PORT 0x60
+#define KBC_STATUS_PORT 0x64
 
-    // If we get here , shutdown failed
-    print("Shutdown failed. System halted.\n");
-    while (1) {
-        asm volatile("hlt");
+// CMOS
+#define CMOS_ADDRESS 0x70
+#define CMOS_DATA 0x71
+
+// Function prototypes
+void shutdown();
+void* find_acpi_table(const char* signature);
+void acpi_poweroff();
+void apm_poweroff();
+void pci_reset();
+void ps2_reset();
+void cmos_reset();
+void triple_fault();
+void outl(uint16_t port, uint32_t val);
+
+void outl(uint16_t port, uint32_t val) {
+    asm volatile("outl %0, %1" : : "a"(val), "Nd"(port));
+}
+
+void io_wait() {
+    outb(0x80, 0);
+}
+
+#define NULL 0
+
+// Type definitions (since we can't use stdint.h)
+#ifndef UINT_TYPES
+#define UINT_TYPES
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+#endif
+
+// ACPI-related definitions
+#define ACPI_RSDP_SIGNATURE "RSD PTR "
+#define ACPI_FADT_SIGNATURE "FACP"
+#define ACPI_DSDT_SIGNATURE "DSDT"
+
+// PCI-related definitions
+#define PCI_CONFIG_ADDRESS 0xCF8
+#define PCI_CONFIG_DATA 0xCFC
+
+// Keyboard controller
+#define KBC_DATA_PORT 0x60
+#define KBC_STATUS_PORT 0x64
+
+// CMOS
+#define CMOS_ADDRESS 0x70
+#define CMOS_DATA 0x71
+
+// Custom memcmp implementation
+int memcmp(const void* s1, const void* s2, int n) {
+    const unsigned char *p1 = s1, *p2 = s2;
+    while (n--) {
+        if (*p1 != *p2) {
+            return *p1 - *p2;
+        }
+        p1++;
+        p2++;
     }
+    return 0;
+}
+
+// Main shutdown function
+void shutdown() {
+    print("Initiating NoirOS advanced shutdown sequence...\n");
+
+    // 1. Try ACPI shutdown
+    print("Attempting ACPI shutdown...\n");
+    acpi_poweroff();
+    io_wait();
+
+    // 2. Try APM shutdown
+    print("Attempting APM shutdown...\n");
+    outw(0xB004, 0x0 | (2 << 10));
+    io_wait();
+
+    // 3. Try PCI reset
+    print("Attempting PCI reset...\n");
+    outl(PCI_CONFIG_ADDRESS, 0x8000F840);
+    outb(PCI_CONFIG_DATA, 0x0E);
+    io_wait();
+
+    // 4. Try PS/2 keyboard controller reset
+    print("Attempting PS/2 keyboard controller reset...\n");
+    while (inb(KBC_STATUS_PORT) & 2);
+    outb(KBC_STATUS_PORT, 0xFE);
+    io_wait();
+
+    // 5. Try CMOS reset
+    print("Attempting CMOS reset...\n");
+    outb(CMOS_ADDRESS, 0xF);
+    outb(CMOS_DATA, 0x0A);
+    io_wait();
+
+    // 6. Try keyboard controller reset
+    print("Attempting keyboard controller reset...\n");
+    uint8_t good = 0x02;
+    while (good & 0x02)
+        good = inb(KEYBOARD_STATUS);
+    outb(KEYBOARD_STATUS, 0xFE);
+    io_wait();
+
+    // 7. Try to exit QEMU (won't affect real hardware)
+    print("Attempting QEMU exit...\n");
+    outw(0x604, 0x2000);
+
+    // 8. Last resort: Triple fault
+    print("All shutdown attempts failed. Initiating triple fault...\n");
+    asm volatile (
+        "movl $0, %eax\n"
+        "movl %eax, (%eax)\n"
+    );
+
+    // If we're still here, nothing worked
+    print("System is still running. It is now safe to power off your computer.\n");
+    
+    // Disable interrupts and halt
+    asm volatile ("cli");
+    while(1) {
+        asm volatile ("hlt");
+    }
+}
+
+// ACPI power off helper function
+void acpi_poweroff() {
+    // Search for RSDP in BIOS memory
+    char* addr;
+    for (addr = (char*)0x000E0000; addr < (char*)0x00100000; addr += 16) {
+        if (memcmp(addr, ACPI_RSDP_SIGNATURE, 8) == 0) {
+            // Found RSDP, now try to shut down
+            uint32_t pm1a_cnt = 0x1000;  // Default port if we can't find real one
+            uint16_t slp_typa = (1 << 13);  // Default sleep type
+
+            outw(pm1a_cnt, slp_typa | (1 << 13));
+            io_wait();
+            return;
+        }
+    }
+}
+
+// ACPI power off
+void* find_acpi_table(const char* signature) {
+    // Search for RSDP in BIOS memory
+    for (char* addr = (char*)0x000E0000; addr < (char*)0x00100000; addr += 16) {
+        if (memcmp(addr, ACPI_RSDP_SIGNATURE, 8) == 0) {
+            // Found RSDP, now find RSDT
+            uint32_t* rsdt = (uint32_t*)(*(uint32_t*)(addr + 16));
+            int entries = (*(uint32_t*)(addr + 4) - 36) / 4;
+
+            // Search RSDT for the requested table
+            for (int i = 0; i < entries; i++) {
+                void* table = (void*)rsdt[i + 9];
+                if (memcmp(table, signature, 4) == 0) {
+                    return table;
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+// APM power off
+void apm_poweroff() {
+    outw(0xB004, 0x0 | (2 << 10));
+    io_wait();
+}
+
+// PCI reset
+void pci_reset() {
+    outl(PCI_CONFIG_ADDRESS, 0x8000F840);
+    outb(PCI_CONFIG_DATA, 0x0E);
+    io_wait();
+}
+
+// PS/2 keyboard controller reset
+void ps2_reset() {
+    while (inb(KBC_STATUS_PORT) & 2);
+    outb(KBC_STATUS_PORT, 0xFE);
+    io_wait();
+}
+
+// CMOS reset
+void cmos_reset() {
+    outb(CMOS_ADDRESS, 0xF);
+    outb(CMOS_DATA, 0x0A);
+    io_wait();
+}
+
+// Triple fault (last resort)
+void triple_fault() {
+    asm volatile (
+        "movl $0, %eax\n"
+        "movl %eax, (%eax)\n"
+    );
 }
 
 // Add these type definitions if not already present
