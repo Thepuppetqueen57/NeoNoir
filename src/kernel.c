@@ -1,5 +1,5 @@
 #define VGA_WIDTH 80
-#define VGA_HEIGHT 25
+#define VGA_HEIGHT 26
 #define VGA_MEMORY 0xB8000
 
 #define KEYBOARD_PORT 0x60
@@ -115,21 +115,19 @@ update_cursor ()
 char
 get_keyboard_char ()
 {
-  static const char sc_ascii[] = {
-    0,   27,  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',
-    '-', '=', '\b', '\t', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',
-    'o', 'p',  '[',  ']', '\n', 0,    'a',  's',  'd',  'f',  'g',  'h',
-    'j', 'k',  'l',  ';', '\'', '`',  0,    '\\', 'z',  'x',  'c',  'v',
-    'b', 'n',  'm',  ',', '.',  '/',  0,    '*',  0,    ' '
-  };
+  static const char sc_ascii[]
+      = { 0,   27,  '1',  '2',  '3',  '4', '5', '6',  '7', '8', '9', '0',
+          '-', '=', '\b', '\t', 'q',  'w', 'e', 'r',  't', 'y', 'u', 'i',
+          'o', 'p', '[',  ']',  '\n', 0,   'a', 's',  'd', 'f', 'g', 'h',
+          'j', 'k', 'l',  ';',  '\'', '`', 0,   '\\', 'z', 'x', 'c', 'v',
+          'b', 'n', 'm',  ',',  '.',  '/', 0,   '*',  0,   ' ' };
 
-  static const char sc_ascii_shift[] = {
-    0,   27,  '!',  '@',  '#',  '$',  '%',  '^',  '&',  '*',  '(',  ')',
-    '_', '+', '\b', '\t', 'Q',  'W',  'E',  'R',  'T',  'Y',  'U',  'I',
-    'O', 'P',  '{',  '}', '\n', 0,    'A',  'S',  'D',  'F',  'G',  'H',
-    'J', 'K',  'L',  ':', '"',  '~',  0,    '|',  'Z',  'X',  'C',  'V',
-    'B', 'N',  'M',  '<', '>',  '?',  0,    '*',  0,    ' '
-  };
+  static const char sc_ascii_shift[]
+      = { 0,   27,  '!',  '@',  '#',  '$', '%', '^', '&', '*', '(', ')',
+          '_', '+', '\b', '\t', 'Q',  'W', 'E', 'R', 'T', 'Y', 'U', 'I',
+          'O', 'P', '{',  '}',  '\n', 0,   'A', 'S', 'D', 'F', 'G', 'H',
+          'J', 'K', 'L',  ':',  '"',  '~', 0,   '|', 'Z', 'X', 'C', 'V',
+          'B', 'N', 'M',  '<',  '>',  '?', 0,   '*', 0,   ' ' };
 
   static int shift = 0;
   static int caps_lock = 0;
@@ -139,7 +137,7 @@ get_keyboard_char ()
       if (inb (0x64) & 0x1)
         {
           uint8_t scancode = inb (0x60);
-          
+
           if (scancode == LSHIFT || scancode == RSHIFT)
             {
               shift = 1;
@@ -172,11 +170,11 @@ get_keyboard_char ()
 
                   if (caps_lock && c >= 'a' && c <= 'z')
                     {
-                      c -= 32;  // Convert to uppercase
+                      c -= 32; // Convert to uppercase
                     }
                   else if (caps_lock && c >= 'A' && c <= 'Z')
                     {
-                      c += 32;  // Convert to lowercase
+                      c += 32; // Convert to lowercase
                     }
 
                   if (c)
@@ -649,7 +647,7 @@ print_system_info ()
   print ("NoirOS v1.0\n");
   print ("Architecture: x86\n");
   print ("Memory: 640KB Base Memory\n");
-  print ("Display: VGA Text Mode 80x25\n");
+  print ("Display: VGA Text Mode 80x26\n");
 }
 
 void
