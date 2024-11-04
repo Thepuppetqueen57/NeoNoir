@@ -23,7 +23,7 @@ extern kernel_main
 
 _start:
     mov esp, stack_top
-    
+    z
     ; Save multiboot info
     push ebx
     push eax

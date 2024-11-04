@@ -15,6 +15,8 @@ uint16_t *vga_buffer = (uint16_t *)VGA_MEMORY;
 int cursor_x = 0;
 int cursor_y = 0;
 
+#define VGA_COLOR_YELLOW 0x0E
+
 // IO functions
 void
 outb (uint16_t port, uint8_t val)
@@ -493,6 +495,179 @@ cpuid (uint32_t leaf, uint32_t subleaf, uint32_t *eax, uint32_t *ebx,
                         : "a"(leaf), "c"(subleaf));
 }
 
+// Function prototypes for the adventure game
+void adventure_north (void);
+void adventure_south (void);
+void adventure_east (void);
+void adventure_west (void);
+void print_colored (const char *str, uint8_t color);
+void textadventure (void);
+
+void
+textadventure ()
+{
+  clear_screen ();
+  print_colored ("Welcome to the Text Adventure Game!\n",
+                 make_color (LIGHT_CYAN, BLACK));
+  print_colored ("You find yourself in a dark forest. You can go:\n",
+                 make_color (LIGHT_GREEN, BLACK));
+  print_colored ("1. North\n", make_color (WHITE, BLACK));
+  print_colored ("2. South\n", make_color (WHITE, BLACK));
+  print_colored ("3. East\n", make_color (WHITE, BLACK));
+  print_colored ("4. West\n", make_color (WHITE, BLACK));
+  print_colored ("Type your choice (1-4): ", make_color (LIGHT_GREY, BLACK));
+
+  char choice[2];
+  read_line (choice, sizeof (choice));
+
+  if (strcmp (choice, "1") == 0)
+    {
+      adventure_north ();
+    }
+  else if (strcmp (choice, "2") == 0)
+    {
+      adventure_south ();
+    }
+  else if (strcmp (choice, "3") == 0)
+    {
+      adventure_east ();
+    }
+  else if (strcmp (choice, "4") == 0)
+    {
+      adventure_west ();
+    }
+  else
+    {
+      print_colored ("Invalid choice. Game over.\n", make_color (RED, BLACK));
+    }
+}
+
+void
+adventure_north ()
+{
+  clear_screen ();
+  print_colored ("You go north and find a mysterious treasure chest!\n",
+                 make_color (LIGHT_BROWN, BLACK));
+  print_colored (
+      "The chest is covered in ancient runes and seems to glow...\n",
+      make_color (LIGHT_BLUE, BLACK));
+  print_colored ("Do you want to open it? (y/n): ", make_color (WHITE, BLACK));
+
+  char choice[2];
+  read_line (choice, sizeof (choice));
+
+  if (strcmp (choice, "y") == 0)
+    {
+      print_colored ("You carefully open the chest...\n",
+                     make_color (LIGHT_GREY, BLACK));
+      print_colored ("*FLASH* A burst of light blinds you momentarily!\n",
+                     make_color (WHITE, BLACK));
+      print_colored ("You found a magical sword and 100 gold coins!\n",
+                     make_color (LIGHT_GREEN, BLACK));
+    }
+  else
+    {
+      print_colored ("You decide to play it safe and leave the chest alone.\n",
+                     make_color (LIGHT_RED, BLACK));
+      print_colored ("Perhaps some mysteries are better left unsolved...\n",
+                     make_color (MAGENTA, BLACK));
+    }
+  print_colored ("\nPress any key to continue...\n",
+                 make_color (WHITE, BLACK));
+  get_keyboard_char ();
+}
+
+void
+adventure_south ()
+{
+  clear_screen ();
+  print_colored ("You venture south into darker woods...\n",
+                 make_color (DARK_GREY, BLACK));
+  print_colored ("Suddenly, a massive dragon appears before you!\n",
+                 make_color (RED, BLACK));
+  print_colored ("Its scales shimmer with an otherworldly glow...\n",
+                 make_color (LIGHT_RED, BLACK));
+  print_colored ("Do you want to fight it? (y/n): ",
+                 make_color (WHITE, BLACK));
+
+  char choice[2];
+  read_line (choice, sizeof (choice));
+
+  if (strcmp (choice, "y") == 0)
+    {
+      print_colored ("You draw your weapon and charge forward!\n",
+                     make_color (LIGHT_BROWN, BLACK));
+      print_colored ("After an epic battle, you emerge victorious!\n",
+                     make_color (GREEN, BLACK));
+      print_colored ("The dragon transforms into a friendly spirit...\n",
+                     make_color (LIGHT_CYAN, BLACK));
+    }
+  else
+    {
+      print_colored ("You wisely choose to retreat...\n",
+                     make_color (LIGHT_BLUE, BLACK));
+      print_colored ("The dragon nods respectfully at your decision.\n",
+                     make_color (CYAN, BLACK));
+    }
+  print_colored ("\nPress any key to continue...\n",
+                 make_color (WHITE, BLACK));
+  get_keyboard_char ();
+}
+
+void
+adventure_east ()
+{
+  clear_screen ();
+  print_colored ("You travel east and discover a mystical village!\n",
+                 make_color (LIGHT_GREEN, BLACK));
+  print_colored ("An old sage approaches you with ancient wisdom...\n",
+                 make_color (CYAN, BLACK));
+  print_colored ("Do you want to hear their counsel? (y/n): ",
+                 make_color (WHITE, BLACK));
+
+  char choice[2];
+  read_line (choice, sizeof (choice));
+
+  if (strcmp (choice, "y") == 0)
+    {
+      print_colored ("The sage reveals secrets of great power...\n",
+                     make_color (MAGENTA, BLACK));
+      print_colored ("You learn about a legendary artifact!\n",
+                     make_color (LIGHT_BROWN, BLACK));
+      print_colored ("This knowledge will serve you well...\n",
+                     make_color (LIGHT_CYAN, BLACK));
+    }
+  else
+    {
+      print_colored ("You politely decline the sage's offer.\n",
+                     make_color (LIGHT_GREY, BLACK));
+      print_colored ("Sometimes ignorance is bliss...\n",
+                     make_color (DARK_GREY, BLACK));
+    }
+  print_colored ("\nPress any key to continue...\n",
+                 make_color (WHITE, BLACK));
+  get_keyboard_char ();
+}
+
+void
+adventure_west ()
+{
+  clear_screen ();
+  print_colored ("You head west into a mysterious fog...\n",
+                 make_color (LIGHT_BLUE, BLACK));
+  print_colored ("The mists swirl around you creating strange shapes...\n",
+                 make_color (CYAN, BLACK));
+  print_colored ("You hear whispers from the beyond...\n",
+                 make_color (MAGENTA, BLACK));
+  print_colored ("As the fog clears, you find your way back...\n",
+                 make_color (GREEN, BLACK));
+  print_colored ("But you're not quite the same as before...\n",
+                 make_color (LIGHT_MAGENTA, BLACK));
+  print_colored ("\nPress any key to continue...\n",
+                 make_color (WHITE, BLACK));
+  get_keyboard_char ();
+}
+
 void
 cpuinfo ()
 {
@@ -662,6 +837,65 @@ hostname ()
   print ("noiros\n");
 }
 
+// Function prototypes for the adventure game
+void adventure_north (void);
+void adventure_south (void);
+void adventure_east (void);
+void adventure_west (void);
+void print_colored (const char *str, uint8_t color);
+void textadventure (void);
+
+// Implementation of print_colored
+void
+print_colored (const char *str, uint8_t color)
+{
+  int current_x = cursor_x;
+  int current_y = cursor_y;
+
+  while (*str)
+    {
+      if (*str == '\n')
+        {
+          cursor_x = 0;
+          cursor_y++;
+        }
+      else
+        {
+          const int index = cursor_y * VGA_WIDTH + cursor_x;
+          vga_buffer[index] = make_vga_entry (*str, color);
+          cursor_x++;
+        }
+
+      if (cursor_x >= VGA_WIDTH)
+        {
+          cursor_x = 0;
+          cursor_y++;
+        }
+
+      if (cursor_y >= VGA_HEIGHT)
+        {
+          // Scroll the screen
+          for (int y = 0; y < VGA_HEIGHT - 1; y++)
+            {
+              for (int x = 0; x < VGA_WIDTH; x++)
+                {
+                  vga_buffer[y * VGA_WIDTH + x]
+                      = vga_buffer[(y + 1) * VGA_WIDTH + x];
+                }
+            }
+          // Clear the last line
+          for (int x = 0; x < VGA_WIDTH; x++)
+            {
+              vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x]
+                  = make_vga_entry (' ', color);
+            }
+          cursor_y = VGA_HEIGHT - 1;
+        }
+      str++;
+    }
+  update_cursor ();
+}
+
 void
 print_banner ()
 {
@@ -695,6 +929,7 @@ execute_command (const char *command)
       print ("  cpuinfo  - Display CPU information\n");
       print ("  time     - Display current time\n");
       print ("  calc [expression] - Basic calculator\n");
+      print ("  textadventure - Start a text adventure game\n");
     }
   else if (strcmp (command, "shutdown") == 0)
     {
@@ -735,6 +970,10 @@ execute_command (const char *command)
   else if (strncmp (command, "calc ", 5) == 0)
     {
       calc (command + 5);
+    }
+  else if (strncmp (command, "textadventure", 5) == 0)
+    {
+      textadventure ();
     }
   else
     {
