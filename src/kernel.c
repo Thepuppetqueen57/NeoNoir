@@ -322,7 +322,7 @@ typedef unsigned int size_t;
 
 // Function prototypes
 void shutdown();
-void* find_acpi_table(const char* signature);
+void *find_acpi_table(const char *signature);
 void acpi_poweroff();
 void apm_poweroff();
 void pci_reset();
@@ -367,7 +367,7 @@ typedef unsigned int uint32_t;
 #define CMOS_DATA 0x71
 
 // Custom memcmp implementation
-int memcmp(const void* s1, const void* s2, int n) {
+int memcmp(const void *s1, const void *s2, int n) {
     const unsigned char *p1 = s1, *p2 = s2;
     while (n--) {
         if (*p1 != *p2) {
@@ -414,8 +414,7 @@ void shutdown() {
     // 6. Try keyboard controller reset
     print("Attempting keyboard controller reset...\n");
     uint8_t good = 0x02;
-    while (good & 0x02)
-        good = inb(KEYBOARD_STATUS);
+    while (good & 0x02) good = inb(KEYBOARD_STATUS);
     outb(KEYBOARD_STATUS, 0xFE);
     io_wait();
 
@@ -425,29 +424,28 @@ void shutdown() {
 
     // 8. Last resort: Triple fault
     print("All shutdown attempts failed. Initiating triple fault...\n");
-    asm volatile (
+    asm volatile(
         "movl $0, %eax\n"
-        "movl %eax, (%eax)\n"
-    );
+        "movl %eax, (%eax)\n");
 
     // If we're still here, nothing worked
     print("System is still running. It is now safe to power off your computer.\n");
-    
+
     // Disable interrupts and halt
-    asm volatile ("cli");
-    while(1) {
-        asm volatile ("hlt");
+    asm volatile("cli");
+    while (1) {
+        asm volatile("hlt");
     }
 }
 
 // ACPI power off helper function
 void acpi_poweroff() {
     // Search for RSDP in BIOS memory
-    char* addr;
-    for (addr = (char*)0x000E0000; addr < (char*)0x00100000; addr += 16) {
+    char *addr;
+    for (addr = (char *)0x000E0000; addr < (char *)0x00100000; addr += 16) {
         if (memcmp(addr, ACPI_RSDP_SIGNATURE, 8) == 0) {
             // Found RSDP, now try to shut down
-            uint32_t pm1a_cnt = 0x1000;  // Default port if we can't find real one
+            uint32_t pm1a_cnt = 0x1000;     // Default port if we can't find real one
             uint16_t slp_typa = (1 << 13);  // Default sleep type
 
             outw(pm1a_cnt, slp_typa | (1 << 13));
@@ -458,17 +456,17 @@ void acpi_poweroff() {
 }
 
 // ACPI power off
-void* find_acpi_table(const char* signature) {
+void *find_acpi_table(const char *signature) {
     // Search for RSDP in BIOS memory
-    for (char* addr = (char*)0x000E0000; addr < (char*)0x00100000; addr += 16) {
+    for (char *addr = (char *)0x000E0000; addr < (char *)0x00100000; addr += 16) {
         if (memcmp(addr, ACPI_RSDP_SIGNATURE, 8) == 0) {
             // Found RSDP, now find RSDT
-            uint32_t* rsdt = (uint32_t*)(*(uint32_t*)(addr + 16));
-            int entries = (*(uint32_t*)(addr + 4) - 36) / 4;
+            uint32_t *rsdt = (uint32_t *)(*(uint32_t *)(addr + 16));
+            int entries = (*(uint32_t *)(addr + 4) - 36) / 4;
 
             // Search RSDT for the requested table
             for (int i = 0; i < entries; i++) {
-                void* table = (void*)rsdt[i + 9];
+                void *table = (void *)rsdt[i + 9];
                 if (memcmp(table, signature, 4) == 0) {
                     return table;
                 }
@@ -507,10 +505,9 @@ void cmos_reset() {
 
 // Triple fault (last resort)
 void triple_fault() {
-    asm volatile (
+    asm volatile(
         "movl $0, %eax\n"
-        "movl %eax, (%eax)\n"
-    );
+        "movl %eax, (%eax)\n");
 }
 
 // Add these type definitions if not already present
@@ -684,53 +681,38 @@ void play_silly_tune(void) {
 
     print_colored("Playing a silly tune...\n", make_color(LIGHT_CYAN, BLACK));
 
-    const unsigned int notes[] = {
-    E4, D4, C4, D4, E4, E4, E4,
-    D4, D4, D4, E4, G4, G4,
-    E4, D4, C4, D4, E4, E4, E4,
-    E4, D4, D4, E4, D4, C4,
-    
-    // New section
-    C4, C4, D4, E4, E4, D4, C4, C4, 
-    D4, E4, E4, D4, C4, C4, D4, E4,
-    
-    // Another variation
-    G4, G4, A4, B4, B4, A4, G4, G4,
-    A4, B4, B4, A4, G4, G4, A4, B4,
-    
-    // Final section
-    E4, D4, C4, D4, E4, E4, E4,
-    D4, D4, D4, E4, G4, G4,
-    E4, D4, C4, D4, E4, E4, E4,
-    E4, D4, D4, E4, D4, C4
-};
+    const unsigned int notes[] = {E4, D4, C4, D4, E4, E4, E4, D4, D4, D4, E4, G4, G4, E4, D4, C4,
+                                  D4, E4, E4, E4, E4, D4, D4, E4, D4, C4,
 
-const unsigned int durations[] = {
-    200, 200, 200, 200, 200, 200, 400,
-    200, 200, 400, 200, 200, 400,
-    200, 200, 200, 200, 200, 200, 400,
-    200, 200, 200, 200, 200, 400,
-    
-    // New section durations
-    200, 200, 200, 200, 200, 200, 400, 200,
-    200, 200, 200, 200, 200, 400, 200,
-    
-    // Another variation durations
-    200, 200, 200, 200, 200, 200, 400, 200,
-    200, 200, 200, 200, 200, 400, 200,
-    
-    // Final section durations
-    200, 200, 200, 200, 200, 200, 400,
-    200, 200, 400, 200, 200, 400,
-    200, 200, 200, 200, 200, 200, 400,
-    200, 200, 200, 200, 200, 400
-};
+                                  // New section
+                                  C4, C4, D4, E4, E4, D4, C4, C4, D4, E4, E4, D4, C4, C4, D4, E4,
+
+                                  // Another variation
+                                  G4, G4, A4, B4, B4, A4, G4, G4, A4, B4, B4, A4, G4, G4, A4, B4,
+
+                                  // Final section
+                                  E4, D4, C4, D4, E4, E4, E4, D4, D4, D4, E4, G4, G4, E4, D4, C4,
+                                  D4, E4, E4, E4, E4, D4, D4, E4, D4, C4};
+
+    const unsigned int durations[] = {
+        200, 200, 200, 200, 200, 200, 400, 200, 200, 400, 200, 200, 400, 200, 200, 200, 200, 200,
+        200, 400, 200, 200, 200, 200, 200, 400,
+
+        // New section durations
+        200, 200, 200, 200, 200, 200, 400, 200, 200, 200, 200, 200, 200, 400, 200,
+
+        // Another variation durations
+        200, 200, 200, 200, 200, 200, 400, 200, 200, 200, 200, 200, 200, 400, 200,
+
+        // Final section durations
+        200, 200, 200, 200, 200, 200, 400, 200, 200, 400, 200, 200, 400, 200, 200, 200, 200, 200,
+        200, 400, 200, 200, 200, 200, 200, 400};
 
     for (int i = 0; i < sizeof(notes) / sizeof(notes[0]); i++) {
         play_sound(notes[i]);
         sleep(durations[i]);
         stop_sound();
-        sleep(50); // Small pause between notes
+        sleep(50);  // Small pause between notes
     }
 
     print_colored("Song finished!\n", make_color(LIGHT_GREEN, BLACK));
@@ -818,7 +800,8 @@ void adventure_south() {
     read_line(choice, sizeof(choice));
 
     if (strcmp(choice, "y") == 0) {
-        print_colored("\nYou draw your weapon and charge forward!\n", make_color(LIGHT_BROWN, BLACK));
+        print_colored("\nYou draw your weapon and charge forward!\n",
+                      make_color(LIGHT_BROWN, BLACK));
         print_colored("After an epic battle, you emerge victorious!\n", make_color(GREEN, BLACK));
         print_colored("The dragon transforms into a friendly spirit...\n",
                       make_color(LIGHT_CYAN, BLACK));
@@ -996,6 +979,83 @@ void hostname() {
     print("noiros\n");
 }
 
+static uint32_t next = 1; // Seed for the random number generator
+
+// Simple pseudo-random number generator
+static uint32_t z1 = 12345, z2 = 67890, z3 = 11111, z4 = 22222;
+
+// Xorshift algorithm combined with Linear Congruential Generator
+uint32_t rand() {
+    // Get some system entropy from timer and other sources
+    uint8_t timer_low = inb(0x40);    // Timer counter low byte
+    uint8_t timer_high = inb(0x40);   // Timer counter high byte
+    uint8_t keyboard_status = inb(0x64); // Keyboard controller status
+    uint32_t timer_value = (timer_high << 8) | timer_low;
+    
+    // Xorshift algorithm
+    z1 ^= (z1 << 11);
+    z1 ^= (z1 >> 8);
+    z2 ^= (z2 << 13);
+    z2 ^= (z2 >> 17);
+    z3 ^= (z3 << 9);
+    z3 ^= (z3 >> 7);
+    z4 = z4 ^ (z4 << 15);
+    
+    // Combine multiple sources of randomness
+    uint32_t result = (z1 ^ z2 ^ z3 ^ z4) + timer_value + keyboard_status;
+    
+    // Linear congruential generator
+    next = next * 1664525 + 1013904223;
+    
+    // Mix everything together
+    result ^= next;
+    result ^= (result << 13);
+    result ^= (result >> 17);
+    result ^= (result << 5);
+    
+    return result;
+}
+
+void srand(uint32_t seed) {
+    // Initialize all state variables with different transformations of the seed
+    next = seed;
+    z1 = seed ^ 0x12345678;
+    z2 = seed ^ 0x87654321;
+    z3 = seed ^ 0xFEDCBA98;
+    z4 = seed ^ 0x11223344;
+    
+    // Additional mixing
+    for(int i = 0; i < 10; i++) {
+        rand(); // Discard first few values to improve distribution
+    }
+}
+
+// Helper function to get random number in a specific range
+uint32_t rand_range(uint32_t min, uint32_t max) {
+    uint32_t range = max - min + 1;
+    return min + (rand() % range);
+}
+
+void fortune() {
+    const char* fortunes[] = {
+        "The best way to predict the future is to invent it.",
+        "Stay hungry, stay foolish.",
+        "The only way to do great work is to love what you do.",
+        "Innovation distinguishes between a leader and a follower.",
+        "The journey of a thousand miles begins with one step.",
+        "Life is 10% what happens to us and 90% how we react to it.",
+        "Your time is limited, don't waste it living someone else's life.",
+        "You only live once, but if you do it right, once is enough."
+    };
+    int fortune_count = sizeof(fortunes) / sizeof(fortunes[0]);
+    int random_index = rand() % fortune_count; // Get a random index
+
+    print_colored("Your fortune: \n", make_color(LIGHT_CYAN, BLACK));
+    print_colored(fortunes[random_index], make_color(LIGHT_GREEN, BLACK)); // Display the fortune
+    print("\n");
+    print("\n");
+}
+
 // Function prototypes for the adventure game
 void adventure_north(void);
 void adventure_south(void);
@@ -1024,6 +1084,7 @@ void execute_command(const char *command) {
         print("  banner   - Display NoirOS banner  | cpuinfo  - Display CPU information\n");
         print("  time     - Display current time   | calc [expression] - Basic calculator\n");
         print("  textgame - Start a game           | play     - Play a silly tune\n");
+        print("  fortune  - Display a fortune.\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -1048,6 +1109,8 @@ void execute_command(const char *command) {
         textadventure();
     } else if (strcmp(command, "play") == 0) {
         play_silly_tune();
+    } else if (strcmp(command, "fortune") == 0) {
+        fortune();
     } else {
         print("Unknown command: ");
         print(command);
