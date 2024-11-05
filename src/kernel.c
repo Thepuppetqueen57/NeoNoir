@@ -1585,6 +1585,7 @@ void execute_command(const char *command) {
         print("  fortune  - Display a fortune.     | touch    - Create a file.\n");
         print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
         print("  ls       - List files and dirs    | cd       - Change directory \n");
+        print("  noirtext [filename] - Edit file   | ping     - Ping an IP adress\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
