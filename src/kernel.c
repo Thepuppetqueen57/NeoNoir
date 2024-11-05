@@ -1,6 +1,169 @@
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int size_t;
+
+int strlen(const char *str) {
+    int len = 0;
+    while (str[len]) len++;
+    return len;
+}
+
+#define NULL 0
+
+#define MEMORY_POOL_SIZE (1024 * 1024) // 1 MB memory pool
+
+typedef struct block_meta {
+    size_t size;
+    struct block_meta *next;
+    int free;
+    int magic; // For debugging
+} block_meta;
+
+#define META_SIZE sizeof(block_meta)
+
+void *global_base = NULL;
+
+// Function prototypes
+void *malloc(size_t size);
+void free(void *ptr);
+void *find_free_block(block_meta **last, size_t size);
+block_meta *request_space(block_meta* last, size_t size);
+
+// Initialize the memory pool
+static char memory_pool[MEMORY_POOL_SIZE];
+static int memory_initialized = 0;
+
+void init_memory() {
+    if (!memory_initialized) {
+        global_base = memory_pool;
+        memory_initialized = 1;
+    }
+}
+
+void *malloc(size_t size) {
+    if (size <= 0) {
+        return NULL;
+    }
+
+    if (!memory_initialized) {
+        init_memory();
+    }
+
+    block_meta *block;
+
+    // Make sure we allocate enough space for the metadata
+    size_t aligned_size = (size + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1);
+    size_t total_size = aligned_size + META_SIZE;
+
+    if (global_base) { // We have existing allocations
+        block_meta *last = global_base;
+        block = find_free_block(&last, total_size);
+        if (!block) { // Failed to find free block
+            block = request_space(last, total_size);
+            if (!block) {
+                return NULL;
+            }
+        } else { // Found free block
+            block->free = 0;
+            block->magic = 0x12345678;
+        }
+    } else { // First allocation
+        block = request_space(NULL, total_size);
+        if (!block) {
+            return NULL;
+        }
+        global_base = block;
+    }
+
+    return (block + 1); // Return pointer to region after block metadata
+}
+
+void *find_free_block(block_meta **last, size_t size) {
+    block_meta *current = global_base;
+    while (current && !(current->free && current->size >= size)) {
+        *last = current;
+        current = current->next;
+    }
+    return current;
+}
+
+block_meta *request_space(block_meta* last, size_t size) {
+    block_meta *block;
+    block = (block_meta *)((char *)global_base + MEMORY_POOL_SIZE - size);
+
+    if ((void *)block < (void *)global_base) {
+        return NULL; // No more memory
+    }
+
+    if (last) {
+        last->next = block;
+    }
+    block->size = size;
+    block->next = NULL;
+    block->free = 0;
+    block->magic = 0x12345678;
+    return block;
+}
+
+void free(void *ptr) {
+    if (!ptr) {
+        return;
+    }
+
+    // Get the block metadata
+    block_meta* block_ptr = (block_meta*)ptr - 1;
+
+    // Basic sanity check
+    if (block_ptr->magic != 0x12345678) {
+        return;
+    }
+
+    // Mark the block as free
+    block_ptr->free = 1;
+    block_ptr->magic = 0x87654321;
+
+    // Optional: Coalesce free blocks
+    block_meta* current = global_base;
+    while (current) {
+        if (current->free && current->next && current->next->free) {
+            current->size += current->next->size + META_SIZE;
+            current->next = current->next->next;
+        } else {
+            current = current->next;
+        }
+    }
+}
+
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 26
 #define VGA_MEMORY 0xB8000
+
+void update_cursor(void);
+uint16_t make_vga_entry(char c, uint8_t color);
+
+int cursor_x, cursor_y;
+uint16_t* vga_buffer = (uint16_t*)0xB8000;
+
+// VGA entry color
+enum vga_color {
+    BLACK,
+    BLUE,
+    GREEN,
+    CYAN,
+    RED,
+    MAGENTA,
+    BROWN,
+    LIGHT_GREY,
+    DARK_GREY,
+    LIGHT_BLUE,
+    LIGHT_GREEN,
+    LIGHT_CYAN,
+    LIGHT_RED,
+    LIGHT_MAGENTA,
+    LIGHT_BROWN,
+    WHITE,
+};
 
 #define KEYBOARD_PORT 0x60
 #define KEYBOARD_STATUS 0x64
@@ -8,30 +171,62 @@
 #define SHUTDOWN_PORT2 0x2000
 #define SHUTDOWN_PORT3 0x604
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
+#define MAX_FILENAME 32
+#define MAX_FILES 64
+#define BLOCK_SIZE 512
+#define DATA_BLOCKS 1024
 
-uint16_t *vga_buffer = (uint16_t *)VGA_MEMORY;
-int cursor_x = 0;
-int cursor_y = 0;
+uint8_t make_color(enum vga_color fg, enum vga_color bg) {
+    return fg | bg << 4;
+}
 
-// Function prototypes
 
-void print_colored(const char *str, unsigned char color);
+void putchar(char c) {
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y++;
+    } else if (c == '\b') {
+        if (cursor_x > 0) {
+            cursor_x--;
+            const int index = cursor_y * VGA_WIDTH + cursor_x;
+            vga_buffer[index] = make_vga_entry(' ', make_color(WHITE, BLACK));
+        }
+    } else {
+        const int index = cursor_y * VGA_WIDTH + cursor_x;
+        vga_buffer[index] = make_vga_entry(c, make_color(WHITE, BLACK));
+        cursor_x++;
+    }
 
-void update_cursor(void);
+    if (cursor_x >= VGA_WIDTH) {
+        cursor_x = 0;
+        cursor_y++;
+    }
 
-uint16_t make_vga_entry(char c, unsigned char color);
+    if (cursor_y >= VGA_HEIGHT) {
+        // Scroll the screen
+        for (int y = 0; y < VGA_HEIGHT - 1; y++) {
+            for (int x = 0; x < VGA_WIDTH; x++) {
+                vga_buffer[y * VGA_WIDTH + x] = vga_buffer[(y + 1) * VGA_WIDTH + x];
+            }
+        }
+        // Clear the last line
+        for (int x = 0; x < VGA_WIDTH; x++) {
+            vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] =
+                make_vga_entry(' ', make_color(WHITE, BLACK));
+        }
+        cursor_y = VGA_HEIGHT - 1;
+    }
+    update_cursor();
+}
 
-void play_sound(unsigned int frequency);
+void print(const char *str) {
+    while (*str) {
+        putchar(*str);
+        str++;
+    }
+}
 
-void stop_sound(void);
 
-void sleep(unsigned int milliseconds);
-
-void play_silly_tune(void);
-
-// Implementation of print_colored
 void print_colored(const char *str, uint8_t color) {
     int current_x = cursor_x;
     int current_y = cursor_y;
@@ -69,6 +264,258 @@ void print_colored(const char *str, uint8_t color) {
     update_cursor();
 }
 
+int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
+char* strncpy(char* dest, const char* src, uint32_t n) {
+    uint32_t i;
+    for (i = 0; i < n && src[i] != '\0'; i++)
+        dest[i] = src[i];
+    for ( ; i < n; i++)
+        dest[i] = '\0';
+    return dest;
+}
+
+void memset(void* ptr, int value, uint32_t num) {
+    uint8_t* p = (uint8_t*)ptr;
+    while (num--) {
+        *p++ = (uint8_t)value;
+    }
+}
+
+void* memcpy(void* dest, const void* src, uint32_t num) {
+    // Cast the destination and source pointers to byte pointers
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+
+    // Copy bytes from source to destination
+    while (num--) {
+        *d++ = *s++; // Copy byte by byte
+    }
+
+    return dest; // Return the destination pointer
+}
+
+typedef struct FileEntry {
+    char filename[MAX_FILENAME];
+    uint32_t size;
+    uint32_t start_block;
+    int is_directory;
+    struct Directory* dir_ptr;  // Pointer to Directory if this is a directory
+} FileEntry;
+
+typedef struct Directory {
+    char name[MAX_FILENAME];
+    uint32_t start_block;
+    uint32_t num_files;
+    FileEntry files[MAX_FILES];
+    struct Directory* parent; // optional, if needed
+} Directory;
+
+typedef struct {
+    Directory root;
+    Directory *current_dir;
+    uint32_t num_files;
+    FileEntry files[MAX_FILES];
+} FileSystem;
+
+FileSystem fs;
+uint8_t disk[BLOCK_SIZE * (DATA_BLOCKS + 1)];
+
+// Filesystem
+
+void init_fs() {
+    memset(&fs, 0, sizeof(FileSystem));
+    memset(disk, 0, sizeof(disk));
+    
+    // Initialize root directory
+    strncpy(fs.root.name, "/", MAX_FILENAME);
+    fs.root.start_block = 1;  // Start after the metadata
+    fs.root.num_files = 0;
+    fs.current_dir = &fs.root;
+}
+
+int create_file(const char* filename, const char* content) {
+    if (fs.current_dir->num_files >= MAX_FILES) {
+        print("Error: Directory is full\n");
+        return -1; // Directory is full
+    }
+
+    // Check if a file with this name already exists
+    for (uint32_t i = 0; i < fs.current_dir->num_files; i++) {
+        if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
+            print("Error: File already exists with this name\n");
+            return -1; // File already exists
+        }
+    }
+
+    // Calculate the size of the content
+    size_t content_size = strlen(content) + 1; // +1 for null terminator
+
+    // Allocate memory for the file content
+    char* file_content = (char*)malloc(content_size);
+    if (file_content == NULL) {
+        print("Error: Failed to allocate memory for file content\n");
+        return -1; // Memory allocation failed
+    }
+
+    // Copy the content to the allocated memory
+    strncpy(file_content, content, content_size);
+
+    // Create a new FileEntry for the file
+    FileEntry* new_entry = &fs.current_dir->files[fs.current_dir->num_files];
+    strncpy(new_entry->filename, filename, MAX_FILENAME);
+    new_entry->size = content_size;
+    new_entry->start_block = (uint32_t)file_content; // Use the pointer as the "block" address
+    new_entry->is_directory = 0;
+
+    fs.current_dir->num_files++;
+
+    return 0;
+}
+
+int read_file(const char* filename, void* buffer, uint32_t size) {
+    int file_index = -1;
+    for (int i = 0; i < fs.num_files; i++) {
+        if (strcmp(fs.files[i].filename, filename) == 0) {
+            file_index = i;
+            break;
+        }
+    }
+    
+    if (file_index == -1) {
+        return -1;  // File not found
+    }
+    
+    FileEntry* file = &fs.files[file_index];
+    if (size > file->size) {
+        size = file->size;
+    }
+    
+    memcpy(buffer, &disk[file->start_block * BLOCK_SIZE], size);
+    return size;
+}
+
+void save_fs() {
+    memcpy(disk, &fs, sizeof(FileSystem));
+}
+
+void load_fs() {
+    memcpy(&fs, disk, sizeof(FileSystem));
+}
+
+// End of Filesystem
+
+// FS Commands
+
+int touch(const char* filename) {
+    return create_file(filename, NULL); // Pass NULL for empty file
+}
+
+void cat(const char *filename) {
+    char buffer[BLOCK_SIZE * 2];  // Adjust buffer size as needed
+    int bytes_read = read_file(filename, buffer, sizeof(buffer));
+    
+    if (bytes_read > 0) {
+        print(buffer);
+    } else {
+        print("File not found or empty.\n");
+    }
+}
+
+int mkdir(const char* dirname) {
+    if (fs.current_dir->num_files >= MAX_FILES) {
+        print("Error: Directory is full\n");
+        return -1; // Directory is full
+    }
+
+    // Check if a file or directory with this name already exists
+    for (uint32_t i = 0; i < fs.current_dir->num_files; i++) {
+        if (strcmp(fs.current_dir->files[i].filename, dirname) == 0) {
+            print("Error: File or directory already exists with this name\n");
+            return -1; // File or directory already exists
+        }
+    }
+
+    // Create a new FileEntry for the directory
+    FileEntry* new_entry = &fs.current_dir->files[fs.current_dir->num_files];
+    strncpy(new_entry->filename, dirname, MAX_FILENAME);
+    new_entry->size = 0; // Directories don't have a size in this simple implementation
+    new_entry->start_block = 0; // You'll need to implement block allocation if you add that feature
+    new_entry->is_directory = 1;
+
+    // Create a new Directory structure
+    Directory* new_dir = (Directory*)malloc(sizeof(Directory));
+    if (new_dir == NULL) {
+        print("Error: Failed to allocate memory for new directory\n");
+        return -1; // Memory allocation failed
+    }
+    
+    strncpy(new_dir->name, dirname, MAX_FILENAME);
+    new_dir->start_block = 0; // You'll need to implement block allocation if you add that feature
+    new_dir->num_files = 0;
+    new_dir->parent = fs.current_dir;
+
+    new_entry->dir_ptr = new_dir;
+
+    fs.current_dir->num_files++;
+
+    return 0;
+}
+
+void ls() {
+    for (int i = 0; i < fs.current_dir->num_files; i++) {
+        print(fs.current_dir->files[i].filename);
+        print("\n");
+    }
+}
+
+int cd(const char* dirname) {
+    if (strcmp(dirname, "..") == 0) {
+        if (fs.current_dir->parent != NULL) {
+            fs.current_dir = fs.current_dir->parent;
+            return 0;
+        }
+        return -1;  // Already at root
+    }
+
+    for (int i = 0; i < fs.current_dir->num_files; i++) {
+        if (strcmp(fs.current_dir->files[i].filename, dirname) == 0) {
+            if (fs.current_dir->files[i].is_directory) {
+                fs.current_dir = fs.current_dir->files[i].dir_ptr;
+                return 0;
+            } else {
+                return -1;  // Not a directory
+            }
+        }
+    }
+
+    return -1;  // Directory not found
+}
+
+// End of FS Commands
+
+// Function prototypes
+
+void print_colored(const char *str, unsigned char color);
+
+void update_cursor(void);
+
+uint16_t make_vga_entry(char c, unsigned char color);
+
+void play_sound(unsigned int frequency);
+
+void stop_sound(void);
+
+void sleep(unsigned int milliseconds);
+
+void play_silly_tune(void);
+
 // IO functions
 void outb(uint16_t port, uint8_t val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
@@ -84,20 +531,6 @@ uint8_t inb(uint16_t port) {
     return ret;
 }
 
-int strcmp(const char *s1, const char *s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(const unsigned char *)s1 - *(const unsigned char *)s2;
-}
-
-int strlen(const char *str) {
-    int len = 0;
-    while (str[len]) len++;
-    return len;
-}
-
 int strncmp(const char *s1, const char *s2, int n) {
     while (n && *s1 && (*s1 == *s2)) {
         ++s1;
@@ -106,30 +539,6 @@ int strncmp(const char *s1, const char *s2, int n) {
     }
     if (n == 0) return 0;
     return *(unsigned char *)s1 - *(unsigned char *)s2;
-}
-
-// VGA entry color
-enum vga_color {
-    BLACK,
-    BLUE,
-    GREEN,
-    CYAN,
-    RED,
-    MAGENTA,
-    BROWN,
-    LIGHT_GREY,
-    DARK_GREY,
-    LIGHT_BLUE,
-    LIGHT_GREEN,
-    LIGHT_CYAN,
-    LIGHT_RED,
-    LIGHT_MAGENTA,
-    LIGHT_BROWN,
-    WHITE,
-};
-
-uint8_t make_color(enum vga_color fg, enum vga_color bg) {
-    return fg | bg << 4;
 }
 
 void update_cursor() {
@@ -224,51 +633,6 @@ void cpuinfo();
 void time();
 void calc(const char *expression);
 
-void putchar(char c) {
-    if (c == '\n') {
-        cursor_x = 0;
-        cursor_y++;
-    } else if (c == '\b') {
-        if (cursor_x > 0) {
-            cursor_x--;
-            const int index = cursor_y * VGA_WIDTH + cursor_x;
-            vga_buffer[index] = make_vga_entry(' ', make_color(WHITE, BLACK));
-        }
-    } else {
-        const int index = cursor_y * VGA_WIDTH + cursor_x;
-        vga_buffer[index] = make_vga_entry(c, make_color(WHITE, BLACK));
-        cursor_x++;
-    }
-
-    if (cursor_x >= VGA_WIDTH) {
-        cursor_x = 0;
-        cursor_y++;
-    }
-
-    if (cursor_y >= VGA_HEIGHT) {
-        // Scroll the screen
-        for (int y = 0; y < VGA_HEIGHT - 1; y++) {
-            for (int x = 0; x < VGA_WIDTH; x++) {
-                vga_buffer[y * VGA_WIDTH + x] = vga_buffer[(y + 1) * VGA_WIDTH + x];
-            }
-        }
-        // Clear the last line
-        for (int x = 0; x < VGA_WIDTH; x++) {
-            vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] =
-                make_vga_entry(' ', make_color(WHITE, BLACK));
-        }
-        cursor_y = VGA_HEIGHT - 1;
-    }
-    update_cursor();
-}
-
-void print(const char *str) {
-    while (*str) {
-        putchar(*str);
-        str++;
-    }
-}
-
 void read_line(char *buffer, int max_length) {
     int i = 0;
     char c;
@@ -300,7 +664,6 @@ typedef char int8_t;
 typedef short int16_t;
 typedef int int32_t;
 typedef long long int64_t;
-typedef unsigned int size_t;
 #endif
 
 // ACPI-related definitions
@@ -1084,7 +1447,9 @@ void execute_command(const char *command) {
         print("  banner   - Display NoirOS banner  | cpuinfo  - Display CPU information\n");
         print("  time     - Display current time   | calc [expression] - Basic calculator\n");
         print("  textgame - Start a game           | play     - Play a silly tune\n");
-        print("  fortune  - Display a fortune.\n");
+        print("  fortune  - Display a fortune.     | touch    - Create a file.\n");
+        print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
+        print("  ls       - List files and dirs    | cd       - Change directory \n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -1111,6 +1476,16 @@ void execute_command(const char *command) {
         play_silly_tune();
     } else if (strcmp(command, "fortune") == 0) {
         fortune();
+    } else if (strncmp(command, "touch ", 6) == 0) {
+        touch(command + 6);
+    } else if (strncmp(command, "cat ", 4) == 0) {
+        cat(command + 4);
+    } else if (strncmp(command, "mkdir ", 6) == 0) {
+        mkdir(command + 6);
+    } else if (strcmp(command, "ls") == 0) {
+        ls();
+    } else if (strncmp(command, "cd ", 3) == 0) {
+        cd(command + 3);
     } else {
         print("Unknown command: ");
         print(command);
@@ -1133,6 +1508,7 @@ void shell() {
 int kernel_main() {
     clear_screen();
     print_banner();
+    init_fs();
     print_colored("Type 'help' for a list of commands.\n\n", make_color(LIGHT_MAGENTA, BLACK));
     shell();
     return 0;
