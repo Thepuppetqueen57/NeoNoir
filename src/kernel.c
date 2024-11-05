@@ -3,6 +3,8 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
+uint32_t rand_range(uint32_t min, uint32_t max);
+
 int strlen(const char *str) {
     int len = 0;
     while (str[len]) len++;
@@ -1355,6 +1357,196 @@ void hostname() {
     print("noiros\n");
 }
 
+#define SNAKE_MAX_LENGTH 100
+#define BOARD_WIDTH 20
+#define BOARD_HEIGHT 20
+
+struct Point {
+    int x;
+    int y;
+};
+
+struct Snake {
+    struct Point body[SNAKE_MAX_LENGTH];
+    int length;
+    enum { UP, DOWN, LEFT, RIGHT } direction;
+};
+
+struct Game {
+    struct Snake snake;
+    struct Point food;
+    int score;
+    int game_over;
+};
+
+void init_game(struct Game* game) {
+    // Initialize snake in the middle
+    game->snake.body[0].x = BOARD_WIDTH / 2;
+    game->snake.body[0].y = BOARD_HEIGHT / 2;
+    game->snake.length = 1;
+    game->snake.direction = RIGHT;
+    game->score = 0;
+    game->game_over = 0;
+    
+    // Place initial food
+    game->food.x = rand_range(0, BOARD_WIDTH - 1);
+    game->food.y = rand_range(0, BOARD_HEIGHT - 1);
+}
+
+void draw_board(struct Game* game) {
+    clear_screen();
+    
+    // Draw border
+    for (int i = 0; i < BOARD_WIDTH + 2; i++) {
+        print_colored("#", make_color(LIGHT_BLUE, BLACK));
+    }
+    print("\n");
+    
+    // Draw game area
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+        print_colored("#", make_color(LIGHT_BLUE, BLACK));
+        
+        for (int x = 0; x < BOARD_WIDTH; x++) {
+            int is_snake = 0;
+            for (int i = 0; i < game->snake.length; i++) {
+                if (game->snake.body[i].x == x && game->snake.body[i].y == y) {
+                    print_colored("O", make_color(LIGHT_GREEN, BLACK));
+                    is_snake = 1;
+                    break;
+                }
+            }
+            
+            if (!is_snake) {
+                if (game->food.x == x && game->food.y == y) {
+                    print_colored("*", make_color(LIGHT_RED, BLACK));
+                } else {
+                    print(" ");
+                }
+            }
+        }
+        
+        print_colored("#\n", make_color(LIGHT_BLUE, BLACK));
+    }
+    
+    // Draw border
+    for (int i = 0; i < BOARD_WIDTH + 2; i++) {
+        print_colored("#", make_color(LIGHT_BLUE, BLACK));
+    }
+    print("\n");
+    
+    // Draw score
+    print("Score: ");
+    char score_str[10];
+    int i = 0;
+    int temp = game->score;
+    do {
+        score_str[i++] = (temp % 10) + '0';
+        temp /= 10;
+    } while (temp > 0);
+    while (i > 0) putchar(score_str[--i]);
+    print("\n");
+}
+
+void update_snake(struct Game* game) {
+    // Save current head position
+    struct Point new_head = game->snake.body[0];
+    
+    // Update head position based on direction
+    switch (game->snake.direction) {
+        case UP:    new_head.y--; break;
+        case DOWN:  new_head.y++; break;
+        case LEFT:  new_head.x--; break;
+        case RIGHT: new_head.x++; break;
+    }
+    
+    // Check for collisions with walls
+    if (new_head.x < 0 || new_head.x >= BOARD_WIDTH ||
+        new_head.y < 0 || new_head.y >= BOARD_HEIGHT) {
+        game->game_over = 1;
+        return;
+    }
+    
+    // Check for collisions with self
+    for (int i = 0; i < game->snake.length; i++) {
+        if (new_head.x == game->snake.body[i].x &&
+            new_head.y == game->snake.body[i].y) {
+            game->game_over = 1;
+            return;
+        }
+    }
+    
+    // Move body
+    for (int i = game->snake.length - 1; i > 0; i--) {
+        game->snake.body[i] = game->snake.body[i-1];
+    }
+    game->snake.body[0] = new_head;
+    
+    // Check for food
+    if (new_head.x == game->food.x && new_head.y == game->food.y) {
+        game->score += 10;
+        game->snake.length++;
+        
+        // Place new food
+        game->food.x = rand_range(0, BOARD_WIDTH - 1);
+        game->food.y = rand_range(0, BOARD_HEIGHT - 1);
+    }
+}
+
+void snake_game() {
+    struct Game game;
+    init_game(&game);
+    
+    print_colored("Snake Game! Use WASD to move, Q to quit\n", make_color(LIGHT_CYAN, BLACK));
+    print("Press any key to start...\n");
+    get_keyboard_char();
+    
+    while (!game.game_over) {
+        draw_board(&game);
+        
+        // Handle input
+        char input = get_keyboard_char();
+        switch (input) {
+            case 'w':
+                if (game.snake.direction != DOWN)
+                    game.snake.direction = UP;
+                break;
+            case 's':
+                if (game.snake.direction != UP)
+                    game.snake.direction = DOWN;
+                break;
+            case 'a':
+                if (game.snake.direction != RIGHT)
+                    game.snake.direction = LEFT;
+                break;
+            case 'd':
+                if (game.snake.direction != LEFT)
+                    game.snake.direction = RIGHT;
+                break;
+            case 'q':
+                return;
+        }
+        
+        update_snake(&game);
+        
+        // Add a small delay
+        for (volatile int i = 0; i < 1000000; i++) {}
+    }
+    
+    print_colored("\nGame Over!\n", make_color(LIGHT_RED, BLACK));
+    print_colored("Final Score: ", make_color(LIGHT_GREEN, BLACK));
+    char score_str[10];
+    int i = 0;
+    int temp = game.score;
+    do {
+        score_str[i++] = (temp % 10) + '0';
+        temp /= 10;
+    } while (temp > 0);
+    while (i > 0) putchar(score_str[--i]);
+    print("\n");
+    print("Press any key to continue...\n");
+    get_keyboard_char();
+}
+
 static uint32_t next = 1;  // Seed for the random number generator
 
 // Simple pseudo-random number generator
@@ -1585,7 +1777,7 @@ void execute_command(const char *command) {
         print("  fortune  - Display a fortune.     | touch    - Create a file.\n");
         print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
         print("  ls       - List files and dirs    | cd       - Change directory \n");
-        print("  noirtext [filename] - Edit file\n");
+        print("  noirtext [filename] - Edit file   | snake    - Play the snake game\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -1626,6 +1818,9 @@ void execute_command(const char *command) {
         noirtext(command + 9);  // Pass filename if provided
     } else if (strcmp(command, "noirtext") == 0) {
         noirtext(NULL);  // No filename provided
+    } else if (strcmp(command, "snake") == 0) {
+
+        snake_game();
     } else {
         print("Unknown command: ");
         print(command);
