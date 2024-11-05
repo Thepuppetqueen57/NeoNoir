@@ -308,7 +308,7 @@ typedef unsigned int uint32_t;
 
 // Keyboard controller
 #define KBC_DATA_PORT 0x60
-#define KBC_STATUS_PORT 0x64
+#define KBC_SATUS_PORT 0x64
 
 // CMOS
 #define CMOS_ADDRESS 0x70
@@ -642,7 +642,7 @@ void adventure_north() {
     read_line(choice, sizeof(choice));
 
     if (strcmp(choice, "y") == 0) {
-        print_colored("You carefully open the chest...\n", make_color(LIGHT_GREY, BLACK));
+        print_colored("\nYou carefully open the chest...\n", make_color(LIGHT_GREY, BLACK));
         print_colored("*FLASH* A burst of light blinds you momentarily!\n",
                       make_color(WHITE, BLACK));
         print_colored("You found a magical sword and 100 gold coins!\n",
@@ -669,7 +669,7 @@ void adventure_south() {
     read_line(choice, sizeof(choice));
 
     if (strcmp(choice, "y") == 0) {
-        print_colored("You draw your weapon and charge forward!\n", make_color(LIGHT_BROWN, BLACK));
+        print_colored("\nYou draw your weapon and charge forward!\n", make_color(LIGHT_BROWN, BLACK));
         print_colored("After an epic battle, you emerge victorious!\n", make_color(GREEN, BLACK));
         print_colored("The dragon transforms into a friendly spirit...\n",
                       make_color(LIGHT_CYAN, BLACK));
@@ -692,7 +692,7 @@ void adventure_east() {
     read_line(choice, sizeof(choice));
 
     if (strcmp(choice, "y") == 0) {
-        print_colored("The sage reveals secrets of great power...\n", make_color(MAGENTA, BLACK));
+        print_colored("\nThe sage reveals secrets of great power...\n", make_color(MAGENTA, BLACK));
         print_colored("You learn about a legendary artifact!\n", make_color(LIGHT_BROWN, BLACK));
         print_colored("This knowledge will serve you well...\n", make_color(LIGHT_CYAN, BLACK));
     } else {
