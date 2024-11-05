@@ -952,7 +952,10 @@ void execute_command(const char *command) {
 void shell() {
     char command[256];
     while (1) {
-        print("root@noiros /> ");
+        print_colored("root", make_color(LIGHT_GREEN, BLACK));
+        print_colored("@", make_color(WHITE, BLACK));
+        print_colored("noiros", make_color(LIGHT_CYAN, BLACK));
+        print_colored(" # ", make_color(LIGHT_RED, BLACK));
         read_line(command, sizeof(command));
         execute_command(command);
     }

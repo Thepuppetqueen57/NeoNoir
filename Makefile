@@ -36,7 +36,7 @@ build/noiros.iso: build build/noiros.bin
 
 # Clean build files
 clean:
-	rm -rf build/*
+	rm -rf build
 	rm -f iso/boot/noiros.bin
 
 run: build/noiros.iso
