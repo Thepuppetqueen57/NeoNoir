@@ -15,7 +15,59 @@ uint16_t *vga_buffer = (uint16_t *)VGA_MEMORY;
 int cursor_x = 0;
 int cursor_y = 0;
 
-#define VGA_COLOR_YELLOW 0x0E
+// Function prototypes
+
+void print_colored(const char *str, unsigned char color);
+
+void update_cursor(void);
+
+uint16_t make_vga_entry(char c, unsigned char color);
+
+void play_sound(unsigned int frequency);
+
+void stop_sound(void);
+
+void sleep(unsigned int milliseconds);
+
+void play_silly_tune(void);
+
+// Implementation of print_colored
+void print_colored(const char *str, uint8_t color) {
+    int current_x = cursor_x;
+    int current_y = cursor_y;
+
+    while (*str) {
+        if (*str == '\n') {
+            cursor_x = 0;
+            cursor_y++;
+        } else {
+            const int index = cursor_y * VGA_WIDTH + cursor_x;
+            vga_buffer[index] = make_vga_entry(*str, color);
+            cursor_x++;
+        }
+
+        if (cursor_x >= VGA_WIDTH) {
+            cursor_x = 0;
+            cursor_y++;
+        }
+
+        if (cursor_y >= VGA_HEIGHT) {
+            // Scroll the screen
+            for (int y = 0; y < VGA_HEIGHT - 1; y++) {
+                for (int x = 0; x < VGA_WIDTH; x++) {
+                    vga_buffer[y * VGA_WIDTH + x] = vga_buffer[(y + 1) * VGA_WIDTH + x];
+                }
+            }
+            // Clear the last line
+            for (int x = 0; x < VGA_WIDTH; x++) {
+                vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = make_vga_entry(' ', color);
+            }
+            cursor_y = VGA_HEIGHT - 1;
+        }
+        str++;
+    }
+    update_cursor();
+}
 
 // IO functions
 void outb(uint16_t port, uint8_t val) {
@@ -586,6 +638,104 @@ void calc(const char *expression) {
     print("\n");
 }
 
+void play_sound(unsigned int frequency);
+void stop_sound(void);
+void sleep(unsigned int milliseconds);
+void play_silly_tune(void);
+
+void play_sound(unsigned int frequency) {
+    unsigned int div;
+    unsigned char tmp;
+
+    // Set the PIT to the desired frequency
+    div = 1193180 / frequency;
+    outb(0x43, 0xb6);
+    outb(0x42, (unsigned char)(div));
+    outb(0x42, (unsigned char)(div >> 8));
+
+    // And play the sound using the PC speaker
+    tmp = inb(0x61);
+    if (tmp != (tmp | 3)) {
+        outb(0x61, tmp | 3);
+    }
+}
+
+void stop_sound(void) {
+    unsigned char tmp = inb(0x61) & 0xFC;
+    outb(0x61, tmp);
+}
+
+void sleep(unsigned int milliseconds) {
+    for (unsigned int i = 0; i < milliseconds * 10000; i++) {
+        __asm__ __volatile__("nop");
+    }
+}
+
+void play_silly_tune(void) {
+    // Define some basic frequencies
+    const unsigned int C4 = 262;
+    const unsigned int D4 = 294;
+    const unsigned int E4 = 330;
+    const unsigned int F4 = 349;
+    const unsigned int G4 = 392;
+    const unsigned int A4 = 440;
+    const unsigned int B4 = 494;
+    const unsigned int C5 = 523;
+
+    print_colored("Playing a silly tune...\n", make_color(LIGHT_CYAN, BLACK));
+
+    const unsigned int notes[] = {
+    E4, D4, C4, D4, E4, E4, E4,
+    D4, D4, D4, E4, G4, G4,
+    E4, D4, C4, D4, E4, E4, E4,
+    E4, D4, D4, E4, D4, C4,
+    
+    // New section
+    C4, C4, D4, E4, E4, D4, C4, C4, 
+    D4, E4, E4, D4, C4, C4, D4, E4,
+    
+    // Another variation
+    G4, G4, A4, B4, B4, A4, G4, G4,
+    A4, B4, B4, A4, G4, G4, A4, B4,
+    
+    // Final section
+    E4, D4, C4, D4, E4, E4, E4,
+    D4, D4, D4, E4, G4, G4,
+    E4, D4, C4, D4, E4, E4, E4,
+    E4, D4, D4, E4, D4, C4
+};
+
+const unsigned int durations[] = {
+    200, 200, 200, 200, 200, 200, 400,
+    200, 200, 400, 200, 200, 400,
+    200, 200, 200, 200, 200, 200, 400,
+    200, 200, 200, 200, 200, 400,
+    
+    // New section durations
+    200, 200, 200, 200, 200, 200, 400, 200,
+    200, 200, 200, 200, 200, 400, 200,
+    
+    // Another variation durations
+    200, 200, 200, 200, 200, 200, 400, 200,
+    200, 200, 200, 200, 200, 400, 200,
+    
+    // Final section durations
+    200, 200, 200, 200, 200, 200, 400,
+    200, 200, 400, 200, 200, 400,
+    200, 200, 200, 200, 200, 200, 400,
+    200, 200, 200, 200, 200, 400
+};
+
+    for (int i = 0; i < sizeof(notes) / sizeof(notes[0]); i++) {
+        play_sound(notes[i]);
+        sleep(durations[i]);
+        stop_sound();
+        sleep(50); // Small pause between notes
+    }
+
+    print_colored("Song finished!\n", make_color(LIGHT_GREEN, BLACK));
+}
+
 // Modified cpuinfo function
 // Function to emulate CPUID instruction
 static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *eax, uint32_t *ebx,
@@ -600,7 +750,6 @@ void adventure_north(void);
 void adventure_south(void);
 void adventure_east(void);
 void adventure_west(void);
-void print_colored(const char *str, uint8_t color);
 void textadventure(void);
 
 void textadventure() {
@@ -852,46 +1001,7 @@ void adventure_north(void);
 void adventure_south(void);
 void adventure_east(void);
 void adventure_west(void);
-void print_colored(const char *str, uint8_t color);
 void textadventure(void);
-
-// Implementation of print_colored
-void print_colored(const char *str, uint8_t color) {
-    int current_x = cursor_x;
-    int current_y = cursor_y;
-
-    while (*str) {
-        if (*str == '\n') {
-            cursor_x = 0;
-            cursor_y++;
-        } else {
-            const int index = cursor_y * VGA_WIDTH + cursor_x;
-            vga_buffer[index] = make_vga_entry(*str, color);
-            cursor_x++;
-        }
-
-        if (cursor_x >= VGA_WIDTH) {
-            cursor_x = 0;
-            cursor_y++;
-        }
-
-        if (cursor_y >= VGA_HEIGHT) {
-            // Scroll the screen
-            for (int y = 0; y < VGA_HEIGHT - 1; y++) {
-                for (int x = 0; x < VGA_WIDTH; x++) {
-                    vga_buffer[y * VGA_WIDTH + x] = vga_buffer[(y + 1) * VGA_WIDTH + x];
-                }
-            }
-            // Clear the last line
-            for (int x = 0; x < VGA_WIDTH; x++) {
-                vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = make_vga_entry(' ', color);
-            }
-            cursor_y = VGA_HEIGHT - 1;
-        }
-        str++;
-    }
-    update_cursor();
-}
 
 void print_banner() {
     print("    _   __      _      ____  _____ \n");
@@ -907,19 +1017,13 @@ void execute_command(const char *command) {
         clear_screen();
     } else if (strcmp(command, "help") == 0) {
         print_colored("Available commands:\n", make_color(LIGHT_CYAN, BLACK));
-        print("  clear    - Clear the screen\n");
-        print("  help     - Show this help message\n");
-        print("  shutdown - Power off the system\n");
-        print("  reboot   - Restart the system\n");
-        print("  echo [text] - Display the text\n");
-        print("  whoami   - Display current user\n");
-        print("  hostname - Display system hostname\n");
-        print("  uname    - Display system information\n");
-        print("  banner   - Display NoirOS banner\n");
-        print("  cpuinfo  - Display CPU information\n");
-        print("  time     - Display current time\n");
-        print("  calc [expression] - Basic calculator\n");
-        print("  textadventure - Start a text adventure game\n");
+        print("  clear    - Clear the screen       | help     - Show this help message\n");
+        print("  shutdown - Power off the system   | reboot   - Restart the system\n");
+        print("  echo [text] - Display the text    | whoami   - Display current user\n");
+        print("  hostname - Display system hostname| uname    - Display system information\n");
+        print("  banner   - Display NoirOS banner  | cpuinfo  - Display CPU information\n");
+        print("  time     - Display current time   | calc [expression] - Basic calculator\n");
+        print("  textgame - Start a game           | play     - Play a silly tune\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -940,8 +1044,10 @@ void execute_command(const char *command) {
         time();
     } else if (strncmp(command, "calc ", 5) == 0) {
         calc(command + 5);
-    } else if (strncmp(command, "textadventure", 5) == 0) {
+    } else if (strncmp(command, "textgame", 5) == 0) {
         textadventure();
+    } else if (strcmp(command, "play") == 0) {
+        play_silly_tune();
     } else {
         print("Unknown command: ");
         print(command);

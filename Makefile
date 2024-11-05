@@ -40,6 +40,6 @@ clean:
 	rm -f iso/boot/noiros.bin
 
 run: build/noiros.iso
-	qemu-system-i386 -cdrom build/noiros.iso
+	qemu-system-i386 -cdrom build/noiros.iso -machine pc -enable-kvm -audio alsa
 
 .PHONY: all clean run
