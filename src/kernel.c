@@ -11,13 +11,13 @@ int strlen(const char *str) {
 
 #define NULL 0
 
-#define MEMORY_POOL_SIZE (1024 * 1024) // 1 MB memory pool
+#define MEMORY_POOL_SIZE (1024 * 1024)  // 1 MB memory pool
 
 typedef struct block_meta {
     size_t size;
     struct block_meta *next;
     int free;
-    int magic; // For debugging
+    int magic;  // For debugging
 } block_meta;
 
 #define META_SIZE sizeof(block_meta)
@@ -28,7 +28,7 @@ void *global_base = NULL;
 void *malloc(size_t size);
 void free(void *ptr);
 void *find_free_block(block_meta **last, size_t size);
-block_meta *request_space(block_meta* last, size_t size);
+block_meta *request_space(block_meta *last, size_t size);
 
 // Initialize the memory pool
 static char memory_pool[MEMORY_POOL_SIZE];
@@ -56,19 +56,19 @@ void *malloc(size_t size) {
     size_t aligned_size = (size + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1);
     size_t total_size = aligned_size + META_SIZE;
 
-    if (global_base) { // We have existing allocations
+    if (global_base) {  // We have existing allocations
         block_meta *last = global_base;
         block = find_free_block(&last, total_size);
-        if (!block) { // Failed to find free block
+        if (!block) {  // Failed to find free block
             block = request_space(last, total_size);
             if (!block) {
                 return NULL;
             }
-        } else { // Found free block
+        } else {  // Found free block
             block->free = 0;
             block->magic = 0x12345678;
         }
-    } else { // First allocation
+    } else {  // First allocation
         block = request_space(NULL, total_size);
         if (!block) {
             return NULL;
@@ -76,7 +76,7 @@ void *malloc(size_t size) {
         global_base = block;
     }
 
-    return (block + 1); // Return pointer to region after block metadata
+    return (block + 1);  // Return pointer to region after block metadata
 }
 
 void *find_free_block(block_meta **last, size_t size) {
@@ -88,12 +88,12 @@ void *find_free_block(block_meta **last, size_t size) {
     return current;
 }
 
-block_meta *request_space(block_meta* last, size_t size) {
+block_meta *request_space(block_meta *last, size_t size) {
     block_meta *block;
     block = (block_meta *)((char *)global_base + MEMORY_POOL_SIZE - size);
 
     if ((void *)block < (void *)global_base) {
-        return NULL; // No more memory
+        return NULL;  // No more memory
     }
 
     if (last) {
@@ -112,7 +112,7 @@ void free(void *ptr) {
     }
 
     // Get the block metadata
-    block_meta* block_ptr = (block_meta*)ptr - 1;
+    block_meta *block_ptr = (block_meta *)ptr - 1;
 
     // Basic sanity check
     if (block_ptr->magic != 0x12345678) {
@@ -124,7 +124,7 @@ void free(void *ptr) {
     block_ptr->magic = 0x87654321;
 
     // Optional: Coalesce free blocks
-    block_meta* current = global_base;
+    block_meta *current = global_base;
     while (current) {
         if (current->free && current->next && current->next->free) {
             current->size += current->next->size + META_SIZE;
@@ -143,7 +143,7 @@ void update_cursor(void);
 uint16_t make_vga_entry(char c, uint8_t color);
 
 int cursor_x, cursor_y;
-uint16_t* vga_buffer = (uint16_t*)0xB8000;
+uint16_t *vga_buffer = (uint16_t *)0xB8000;
 
 // VGA entry color
 enum vga_color {
@@ -179,7 +179,6 @@ enum vga_color {
 uint8_t make_color(enum vga_color fg, enum vga_color bg) {
     return fg | bg << 4;
 }
-
 
 void putchar(char c) {
     if (c == '\n') {
@@ -226,7 +225,6 @@ void print(const char *str) {
     }
 }
 
-
 void print_colored(const char *str, uint8_t color) {
     int current_x = cursor_x;
     int current_y = cursor_y;
@@ -264,41 +262,39 @@ void print_colored(const char *str, uint8_t color) {
     update_cursor();
 }
 
-int strcmp(const char* s1, const char* s2) {
+int strcmp(const char *s1, const char *s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
         s2++;
     }
-    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+    return *(const unsigned char *)s1 - *(const unsigned char *)s2;
 }
 
-char* strncpy(char* dest, const char* src, uint32_t n) {
+char *strncpy(char *dest, const char *src, uint32_t n) {
     uint32_t i;
-    for (i = 0; i < n && src[i] != '\0'; i++)
-        dest[i] = src[i];
-    for ( ; i < n; i++)
-        dest[i] = '\0';
+    for (i = 0; i < n && src[i] != '\0'; i++) dest[i] = src[i];
+    for (; i < n; i++) dest[i] = '\0';
     return dest;
 }
 
-void memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
+void memset(void *ptr, int value, uint32_t num) {
+    uint8_t *p = (uint8_t *)ptr;
     while (num--) {
         *p++ = (uint8_t)value;
     }
 }
 
-void* memcpy(void* dest, const void* src, uint32_t num) {
+void *memcpy(void *dest, const void *src, uint32_t num) {
     // Cast the destination and source pointers to byte pointers
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
+    uint8_t *d = (uint8_t *)dest;
+    const uint8_t *s = (const uint8_t *)src;
 
     // Copy bytes from source to destination
     while (num--) {
-        *d++ = *s++; // Copy byte by byte
+        *d++ = *s++;  // Copy byte by byte
     }
 
-    return dest; // Return the destination pointer
+    return dest;  // Return the destination pointer
 }
 
 typedef struct FileEntry {
@@ -306,7 +302,7 @@ typedef struct FileEntry {
     uint32_t size;
     uint32_t start_block;
     int is_directory;
-    struct Directory* dir_ptr;  // Pointer to Directory if this is a directory
+    struct Directory *dir_ptr;  // Pointer to Directory if this is a directory
 } FileEntry;
 
 typedef struct Directory {
@@ -314,7 +310,7 @@ typedef struct Directory {
     uint32_t start_block;
     uint32_t num_files;
     FileEntry files[MAX_FILES];
-    struct Directory* parent; // optional, if needed
+    struct Directory *parent;  // optional, if needed
 } Directory;
 
 typedef struct {
@@ -332,7 +328,7 @@ uint8_t disk[BLOCK_SIZE * (DATA_BLOCKS + 1)];
 void init_fs() {
     memset(&fs, 0, sizeof(FileSystem));
     memset(disk, 0, sizeof(disk));
-    
+
     // Initialize root directory
     strncpy(fs.root.name, "/", MAX_FILENAME);
     fs.root.start_block = 1;  // Start after the metadata
@@ -340,38 +336,38 @@ void init_fs() {
     fs.current_dir = &fs.root;
 }
 
-int create_file(const char* filename, const char* content) {
+int create_file(const char *filename, const char *content) {
     if (fs.current_dir->num_files >= MAX_FILES) {
         print("Error: Directory is full\n");
-        return -1; // Directory is full
+        return -1;  // Directory is full
     }
 
     // Check if a file with this name already exists
     for (uint32_t i = 0; i < fs.current_dir->num_files; i++) {
         if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
             print("Error: File already exists with this name\n");
-            return -1; // File already exists
+            return -1;  // File already exists
         }
     }
 
     // Calculate the size of the content
-    size_t content_size = strlen(content) + 1; // +1 for null terminator
+    size_t content_size = strlen(content) + 1;  // +1 for null terminator
 
     // Allocate memory for the file content
-    char* file_content = (char*)malloc(content_size);
+    char *file_content = (char *)malloc(content_size);
     if (file_content == NULL) {
         print("Error: Failed to allocate memory for file content\n");
-        return -1; // Memory allocation failed
+        return -1;  // Memory allocation failed
     }
 
     // Copy the content to the allocated memory
     strncpy(file_content, content, content_size);
 
     // Create a new FileEntry for the file
-    FileEntry* new_entry = &fs.current_dir->files[fs.current_dir->num_files];
+    FileEntry *new_entry = &fs.current_dir->files[fs.current_dir->num_files];
     strncpy(new_entry->filename, filename, MAX_FILENAME);
     new_entry->size = content_size;
-    new_entry->start_block = (uint32_t)file_content; // Use the pointer as the "block" address
+    new_entry->start_block = (uint32_t)file_content;  // Use the pointer as the "block" address
     new_entry->is_directory = 0;
 
     fs.current_dir->num_files++;
@@ -379,7 +375,7 @@ int create_file(const char* filename, const char* content) {
     return 0;
 }
 
-int read_file(const char* filename, void* buffer, uint32_t size) {
+int read_file(const char *filename, void *buffer, uint32_t size) {
     int file_index = -1;
     for (int i = 0; i < fs.num_files; i++) {
         if (strcmp(fs.files[i].filename, filename) == 0) {
@@ -387,16 +383,16 @@ int read_file(const char* filename, void* buffer, uint32_t size) {
             break;
         }
     }
-    
+
     if (file_index == -1) {
         return -1;  // File not found
     }
-    
-    FileEntry* file = &fs.files[file_index];
+
+    FileEntry *file = &fs.files[file_index];
     if (size > file->size) {
         size = file->size;
     }
-    
+
     memcpy(buffer, &disk[file->start_block * BLOCK_SIZE], size);
     return size;
 }
@@ -413,51 +409,68 @@ void load_fs() {
 
 // FS Commands
 
-int touch(const char* filename) {
-    return create_file(filename, NULL); // Pass NULL for empty file
+int touch(const char *filename) {
+    return create_file(filename, NULL);  // Pass NULL for empty file
 }
 
 void cat(const char *filename) {
-    char buffer[BLOCK_SIZE * 2];  // Adjust buffer size as needed
-    int bytes_read = read_file(filename, buffer, sizeof(buffer));
-    
-    if (bytes_read > 0) {
-        print(buffer);
-    } else {
-        print("File not found or empty.\n");
+    // Find the file
+    FileEntry *file = NULL;
+    for (int i = 0; i < fs.current_dir->num_files; i++) {
+        if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
+            file = &fs.current_dir->files[i];
+            break;
+        }
     }
+
+    if (file == NULL) {
+        print("Error: File not found\n");
+        return;
+    }
+
+    // Check if it's a directory
+    if (file->is_directory) {
+        print("Error: Cannot cat a directory\n");
+        return;
+    }
+
+    // Print the contents of the file
+    char *content = (char *)file->start_block;
+    print(content);
+    print("\n");
 }
 
-int mkdir(const char* dirname) {
+int mkdir(const char *dirname) {
     if (fs.current_dir->num_files >= MAX_FILES) {
         print("Error: Directory is full\n");
-        return -1; // Directory is full
+        return -1;  // Directory is full
     }
 
     // Check if a file or directory with this name already exists
     for (uint32_t i = 0; i < fs.current_dir->num_files; i++) {
         if (strcmp(fs.current_dir->files[i].filename, dirname) == 0) {
             print("Error: File or directory already exists with this name\n");
-            return -1; // File or directory already exists
+            return -1;  // File or directory already exists
         }
     }
 
     // Create a new FileEntry for the directory
-    FileEntry* new_entry = &fs.current_dir->files[fs.current_dir->num_files];
+    FileEntry *new_entry = &fs.current_dir->files[fs.current_dir->num_files];
     strncpy(new_entry->filename, dirname, MAX_FILENAME);
-    new_entry->size = 0; // Directories don't have a size in this simple implementation
-    new_entry->start_block = 0; // You'll need to implement block allocation if you add that feature
+    new_entry->size = 0;  // Directories don't have a size in this simple implementation
+    new_entry->start_block =
+        0;  // You'll need to implement block allocation if you add that feature
     new_entry->is_directory = 1;
 
     // Create a new Directory structure
-    Directory* new_dir = (Directory*)malloc(sizeof(Directory));
+    Directory *new_dir = (Directory *)malloc(sizeof(Directory));
     if (new_dir == NULL) {
         print("Error: Failed to allocate memory for new directory\n");
-        return -1; // Memory allocation failed
+        return -1;  // Memory allocation failed
     }
-    
+
     strncpy(new_dir->name, dirname, MAX_FILENAME);
-    new_dir->start_block = 0; // You'll need to implement block allocation if you add that feature
+    new_dir->start_block = 0;  // You'll need to implement block allocation if you add that feature
     new_dir->num_files = 0;
     new_dir->parent = fs.current_dir;
 
@@ -475,7 +488,7 @@ void ls() {
     }
 }
 
-int cd(const char* dirname) {
+int cd(const char *dirname) {
     if (strcmp(dirname, "..") == 0) {
         if (fs.current_dir->parent != NULL) {
             fs.current_dir = fs.current_dir->parent;
@@ -1342,7 +1355,7 @@ void hostname() {
     print("noiros\n");
 }
 
-static uint32_t next = 1; // Seed for the random number generator
+static uint32_t next = 1;  // Seed for the random number generator
 
 // Simple pseudo-random number generator
 static uint32_t z1 = 12345, z2 = 67890, z3 = 11111, z4 = 22222;
@@ -1350,11 +1363,11 @@ static uint32_t z1 = 12345, z2 = 67890, z3 = 11111, z4 = 22222;
 // Xorshift algorithm combined with Linear Congruential Generator
 uint32_t rand() {
     // Get some system entropy from timer and other sources
-    uint8_t timer_low = inb(0x40);    // Timer counter low byte
-    uint8_t timer_high = inb(0x40);   // Timer counter high byte
-    uint8_t keyboard_status = inb(0x64); // Keyboard controller status
+    uint8_t timer_low = inb(0x40);        // Timer counter low byte
+    uint8_t timer_high = inb(0x40);       // Timer counter high byte
+    uint8_t keyboard_status = inb(0x64);  // Keyboard controller status
     uint32_t timer_value = (timer_high << 8) | timer_low;
-    
+
     // Xorshift algorithm
     z1 ^= (z1 << 11);
     z1 ^= (z1 >> 8);
@@ -1363,19 +1376,19 @@ uint32_t rand() {
     z3 ^= (z3 << 9);
     z3 ^= (z3 >> 7);
     z4 = z4 ^ (z4 << 15);
-    
+
     // Combine multiple sources of randomness
     uint32_t result = (z1 ^ z2 ^ z3 ^ z4) + timer_value + keyboard_status;
-    
+
     // Linear congruential generator
     next = next * 1664525 + 1013904223;
-    
+
     // Mix everything together
     result ^= next;
     result ^= (result << 13);
     result ^= (result >> 17);
     result ^= (result << 5);
-    
+
     return result;
 }
 
@@ -1386,10 +1399,10 @@ void srand(uint32_t seed) {
     z2 = seed ^ 0x87654321;
     z3 = seed ^ 0xFEDCBA98;
     z4 = seed ^ 0x11223344;
-    
+
     // Additional mixing
-    for(int i = 0; i < 10; i++) {
-        rand(); // Discard first few values to improve distribution
+    for (int i = 0; i < 10; i++) {
+        rand();  // Discard first few values to improve distribution
     }
 }
 
@@ -1400,21 +1413,19 @@ uint32_t rand_range(uint32_t min, uint32_t max) {
 }
 
 void fortune() {
-    const char* fortunes[] = {
-        "The best way to predict the future is to invent it.",
-        "Stay hungry, stay foolish.",
-        "The only way to do great work is to love what you do.",
-        "Innovation distinguishes between a leader and a follower.",
-        "The journey of a thousand miles begins with one step.",
-        "Life is 10% what happens to us and 90% how we react to it.",
-        "Your time is limited, don't waste it living someone else's life.",
-        "You only live once, but if you do it right, once is enough."
-    };
+    const char *fortunes[] = {"The best way to predict the future is to invent it.",
+                              "Stay hungry, stay foolish.",
+                              "The only way to do great work is to love what you do.",
+                              "Innovation distinguishes between a leader and a follower.",
+                              "The journey of a thousand miles begins with one step.",
+                              "Life is 10% what happens to us and 90% how we react to it.",
+                              "Your time is limited, don't waste it living someone else's life.",
+                              "You only live once, but if you do it right, once is enough."};
     int fortune_count = sizeof(fortunes) / sizeof(fortunes[0]);
-    int random_index = rand() % fortune_count; // Get a random index
+    int random_index = rand() % fortune_count;  // Get a random index
 
     print_colored("Your fortune: \n", make_color(LIGHT_CYAN, BLACK));
-    print_colored(fortunes[random_index], make_color(LIGHT_GREEN, BLACK)); // Display the fortune
+    print_colored(fortunes[random_index], make_color(LIGHT_GREEN, BLACK));  // Display the fortune
     print("\n");
     print("\n");
 }
@@ -1433,6 +1444,130 @@ void print_banner() {
     print(" / /|  / /_/ / / /  / /_/ /___/ / \n");
     print("/_/ |_/\\____/_/_/   \\____//____/  \n");
     print_colored("\nWelcome to NoirOS!\n", make_color(LIGHT_CYAN, BLACK));
+}
+
+#define MAX_LINES 100
+#define MAX_LINE_LENGTH 80
+
+char text_buffer[MAX_LINES][MAX_LINE_LENGTH];
+int current_line = 0;
+int num_lines = 0;
+
+void noirtext(const char* filename) {
+    clear_screen();
+    print_colored("Welcome to NoirText!\n", make_color(LIGHT_CYAN, BLACK));
+    print_colored("Commands: :w to save, :q to quit\n\n", make_color(LIGHT_GREEN, BLACK));
+
+    // Load file content if it exists
+    FileEntry* file = NULL;
+    if (filename) {
+        for (int i = 0; i < fs.current_dir->num_files; i++) {
+            if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
+                file = &fs.current_dir->files[i];
+                break;
+            }
+        }
+        
+        if (file) {
+            char* content = (char*)file->start_block;
+            int line = 0;
+            int col = 0;
+            for (size_t i = 0; i < file->size && line < MAX_LINES; i++) {
+                if (content[i] == '\n' || col == MAX_LINE_LENGTH - 1) {
+                    text_buffer[line][col] = '\0';
+                    line++;
+                    col = 0;
+                } else {
+                    text_buffer[line][col] = content[i];
+                    col++;
+                }
+            }
+            if (col > 0) {
+                text_buffer[line][col] = '\0';
+                line++;
+            }
+            num_lines = line;
+        }
+    }
+
+    while (1) {
+        // Display current content
+        for (int i = 0; i < num_lines; i++) {
+            print(text_buffer[i]);
+            print("\n");
+        }
+
+        // Get user input
+        char input[MAX_LINE_LENGTH];
+        print("> ");
+        read_line(input, MAX_LINE_LENGTH);
+
+        // Check for commands
+        if (strcmp(input, ":w") == 0) {
+            // Save file
+            if (filename) {
+                if (file == NULL) {
+                    if (fs.current_dir->num_files >= MAX_FILES) {
+                        print_colored("Error: Directory is full\n", make_color(LIGHT_RED, BLACK));
+                        continue;
+                    }
+                    file = &fs.current_dir->files[fs.current_dir->num_files];
+                    strncpy(file->filename, filename, MAX_FILENAME);
+                    fs.current_dir->num_files++;
+                }
+
+                // Calculate total content size
+                size_t total_size = 0;
+                for (int i = 0; i < num_lines; i++) {
+                    total_size += strlen(text_buffer[i]) + 1; // +1 for newline
+                }
+
+                // Allocate memory for file content
+                char* content = (char*)malloc(total_size + 1); // +1 for null terminator
+                if (content == NULL) {
+                    print_colored("Error: Failed to allocate memory for file content\n", make_color(LIGHT_RED, BLACK));
+                    continue;
+                }
+
+                // Copy content to file
+                char* ptr = content;
+                for (int i = 0; i < num_lines; i++) {
+                    size_t line_len = strlen(text_buffer[i]);
+                    memcpy(ptr, text_buffer[i], line_len);
+                    ptr += line_len;
+                    *ptr++ = '\n';
+                }
+                *ptr = '\0'; // Null terminate the content
+
+                // Update file entry
+                if (file->start_block != 0) {
+                    free((void*)file->start_block);
+                }
+                file->start_block = (uint32_t)content;
+                file->size = total_size;
+
+                print_colored("File saved.\n", make_color(LIGHT_GREEN, BLACK));
+            } else {
+                print_colored("No filename specified.\n", make_color(LIGHT_RED, BLACK));
+            }
+            continue;
+        } else if (strcmp(input, ":q") == 0) {
+            // Quit
+            break;
+        }
+
+        // Add new line to buffer
+        if (num_lines < MAX_LINES) {
+            strncpy(text_buffer[num_lines], input, MAX_LINE_LENGTH);
+            num_lines++;
+        } else {
+            print_colored("Buffer full!\n", make_color(LIGHT_RED, BLACK));
+        }
+
+        clear_screen();
+    }
+
+    clear_screen();
 }
 
 void execute_command(const char *command) {
@@ -1486,6 +1621,10 @@ void execute_command(const char *command) {
         ls();
     } else if (strncmp(command, "cd ", 3) == 0) {
         cd(command + 3);
+    } else if (strncmp(command, "noirtext ", 9) == 0) {
+        noirtext(command + 9);  // Pass filename if provided
+    } else if (strcmp(command, "noirtext") == 0) {
+        noirtext(NULL);  // No filename provided
     } else {
         print("Unknown command: ");
         print(command);
