@@ -3,6 +3,50 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
+int parse_condition(const char* condition, char* left, char* op, char* right);
+
+int is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+int parse_condition(const char* condition, char* left, char* op, char* right) {
+    const char* ptr = condition;
+    int i = 0;
+
+    // Parse left operand
+    while (*ptr && !is_space(*ptr) && i < 19) {
+        left[i++] = *ptr++;
+    }
+    left[i] = '\0';
+
+    // Skip whitespace
+    while (is_space(*ptr)) ptr++;
+
+    // Parse operator
+    i = 0;
+    while (*ptr && !is_space(*ptr) && i < 2) {
+        op[i++] = *ptr++;
+    }
+    op[i] = '\0';
+
+    // Skip whitespace
+    while (is_space(*ptr)) ptr++;
+
+    // Parse right operand
+    i = 0;
+    while (*ptr && !is_space(*ptr) && i < 19) {
+        right[i++] = *ptr++;
+    }
+    right[i] = '\0';
+
+    return (*left && *op && *right) ? 3 : 0;
+}
+
+typedef __builtin_va_list va_list;
+#define va_start(v,l) __builtin_va_start(v,l)
+#define va_end(v) __builtin_va_end(v)
+#define va_arg(v,l) __builtin_va_arg(v,l)
+
 uint32_t rand_range(uint32_t min, uint32_t max);
 
 int strlen(const char *str) {
@@ -461,7 +505,7 @@ int mkdir(const char *dirname) {
     strncpy(new_entry->filename, dirname, MAX_FILENAME);
     new_entry->size = 0;  // Directories don't have a size in this simple implementation
     new_entry->start_block =
-        0;  // You'll need to implement block allocation if you add that feature
+        0;  // We'll need to implement block allocation if we add that feature
     new_entry->is_directory = 1;
 
     // Create a new Directory structure
@@ -472,7 +516,7 @@ int mkdir(const char *dirname) {
     }
 
     strncpy(new_dir->name, dirname, MAX_FILENAME);
-    new_dir->start_block = 0;  // You'll need to implement block allocation if you add that feature
+    new_dir->start_block = 0;  // We'll need to implement block allocation if we add that feature
     new_dir->num_files = 0;
     new_dir->parent = fs.current_dir;
 
@@ -924,92 +968,209 @@ char parse_operator(const char **str) {
     return op;
 }
 
-// Modified calculator function
+#define MAX_DIGITS 10
+#define DECIMAL_PLACES 4
+#define FLOAT_MULTIPLIER 10000
+
+typedef struct {
+    int value;  // Stores the number as an integer, scaled by FLOAT_MULTIPLIER
+    int is_negative;
+} FloatNum;
+
+// Function to parse a floating-point number from a string
+FloatNum parse_float(const char **str) {
+    FloatNum num = {0, 0};
+    int digits = 0;
+    int decimal_seen = 0;
+    int decimal_places = 0;
+    
+    // Handle negative numbers
+    if (**str == '-') {
+        num.is_negative = 1;
+        (*str)++;
+    }
+
+    // Parse integer and fractional parts
+    while ((**str >= '0' && **str <= '9') || **str == '.') {
+        if (**str == '.') {
+            if (decimal_seen) break;  // Second decimal point, stop parsing
+            decimal_seen = 1;
+        } else if (digits < MAX_DIGITS) {
+            num.value = num.value * 10 + (**str - '0');
+            if (decimal_seen) {
+                decimal_places++;
+                if (decimal_places >= DECIMAL_PLACES) break;
+            }
+            digits++;
+        } else {
+            break;
+        }
+        (*str)++;
+    }
+
+    // Adjust the value based on decimal places
+    while (decimal_places < DECIMAL_PLACES) {
+        num.value *= 10;
+        decimal_places++;
+    }
+
+    return num;
+}
+
+// Function to add two floating-point numbers
+FloatNum add_float(FloatNum a, FloatNum b) {
+    FloatNum result;
+    if (a.is_negative == b.is_negative) {
+        result.value = a.value + b.value;
+        result.is_negative = a.is_negative;
+    } else {
+        if (a.value > b.value) {
+            result.value = a.value - b.value;
+            result.is_negative = a.is_negative;
+        } else {
+            result.value = b.value - a.value;
+            result.is_negative = b.is_negative;
+        }
+    }
+    return result;
+}
+
+// Function to subtract two floating-point numbers
+FloatNum subtract_float(FloatNum a, FloatNum b) {
+    b.is_negative = !b.is_negative;
+    return add_float(a, b);
+}
+
+// Function to multiply two floating-point numbers
+FloatNum multiply_float(FloatNum a, FloatNum b) {
+    FloatNum result;
+    result.is_negative = a.is_negative != b.is_negative;
+
+    // Use two 32-bit multiplications to avoid 64-bit arithmetic
+    int high1 = a.value / 1000;
+    int low1 = a.value % 1000;
+    int high2 = b.value / 1000;
+    int low2 = b.value % 1000;
+
+    int mid = high1 * low2 + high2 * low1;
+    result.value = (high1 * high2 * FLOAT_MULTIPLIER) + (mid * 1000) + (low1 * low2 / 1000);
+    
+    return result;
+}
+
+// Function to divide two floating-point numbers
+FloatNum divide_float(FloatNum a, FloatNum b) {
+    FloatNum result;
+    if (b.value == 0) {
+        print("Error: Division by zero\n");
+        return (FloatNum){0, 0};
+    }
+
+    result.is_negative = a.is_negative != b.is_negative;
+
+    // Perform division
+    result.value = (a.value * FLOAT_MULTIPLIER) / b.value;
+
+    return result;
+}
+
+// Function to print a floating-point number
+void print_float(FloatNum num) {
+    if (num.is_negative) {
+        putchar('-');
+    }
+    
+    int integer_part = num.value / FLOAT_MULTIPLIER;
+    int fractional_part = num.value % FLOAT_MULTIPLIER;
+
+    // Print integer part
+    char buffer[MAX_DIGITS];
+    int i = 0;
+    do {
+        buffer[i++] = (integer_part % 10) + '0';
+        integer_part /= 10;
+    } while (integer_part > 0 && i < MAX_DIGITS);
+    while (i > 0) putchar(buffer[--i]);
+
+    // Only print fractional part if it's non-zero
+    if (fractional_part != 0) {
+        putchar('.');
+        // Remove trailing zeros
+        while (fractional_part % 10 == 0 && fractional_part != 0) {
+            fractional_part /= 10;
+        }
+        i = 0;
+        do {
+            buffer[i++] = (fractional_part % 10) + '0';
+            fractional_part /= 10;
+        } while (fractional_part > 0 && i < DECIMAL_PLACES);
+        while (i > 0) putchar(buffer[--i]);
+    }
+}
+
+// Function to skip whitespace
+void skip_whitespace(const char **ptr) {
+    while (**ptr == ' ' || **ptr == '\t') {
+        (*ptr)++;
+    }
+}
+
+// Main calculator function
 void calc(const char *expression) {
     const char *ptr = expression;
-    int a, b, result;
+    FloatNum a, b, result;
     char op;
 
+    // Skip initial whitespace
+    skip_whitespace(&ptr);
+
     // Parse first number
-    a = parse_number(&ptr);
+    a = parse_float(&ptr);
 
     // Parse operator
     op = parse_operator(&ptr);
+    if (op == '\0') {
+        print("Error: Invalid operator\n");
+        return;
+    }
+
+    // Skip whitespace after operator
+    skip_whitespace(&ptr);
 
     // Parse second number
-    b = parse_number(&ptr);
+    b = parse_float(&ptr);
 
+    // Perform calculation
     switch (op) {
         case '+':
-            result = a + b;
+            result = add_float(a, b);
             break;
         case '-':
-            result = a - b;
+            result = subtract_float(a, b);
             break;
         case '*':
-            result = a * b;
+            result = multiply_float(a, b);
             break;
         case '/':
-            if (b == 0) {
+            if (b.value == 0) {
                 print("Error: Division by zero\n");
                 return;
             }
-            result = a / b;
+            result = divide_float(a, b);
             break;
         default:
-            print("Invalid operator. Supported operators: +, -, *, /\n");
+            print("Error: Invalid operator. Supported operators: +, -, *, /\n");
             return;
     }
 
-    // Print result using our own number to string conversion
-    char buffer[20];
-    int i = 0;
-    int is_negative = 0;
-    int temp;
-
-    // Convert first number
-    if (a < 0) {
-        putchar('-');
-        a = -a;
-    }
-    temp = a;
-    do {
-        buffer[i++] = (temp % 10) + '0';
-        temp /= 10;
-    } while (temp > 0);
-    while (i > 0) putchar(buffer[--i]);
-
-    // Print operator
+    // Print the calculation
+    print_float(a);
     putchar(' ');
     putchar(op);
     putchar(' ');
-
-    // Convert second number
-    if (b < 0) {
-        putchar('-');
-        b = -b;
-    }
-    temp = b;
-    do {
-        buffer[i++] = (temp % 10) + '0';
-        temp /= 10;
-    } while (temp > 0);
-    while (i > 0) putchar(buffer[--i]);
-
+    print_float(b);
     print(" = ");
-
-    // Convert result
-    if (result < 0) {
-        putchar('-');
-        result = -result;
-    }
-    temp = result;
-    do {
-        buffer[i++] = (temp % 10) + '0';
-        temp /= 10;
-    } while (temp > 0);
-    while (i > 0) putchar(buffer[--i]);
-
+    print_float(result);
     print("\n");
 }
 
@@ -1344,7 +1505,7 @@ void echo(const char *str) {
 
 void print_system_info() {
     print("NoirOS v1.0\n");
-    print("Architecture: x86\n");
+    print("Architecture: x86, 32 Bit\n");
     print("Memory: 640KB Base Memory\n");
     print("Display: VGA Text Mode 80x26\n");
 }
@@ -1545,6 +1706,7 @@ void snake_game() {
     print("\n");
     print("Press any key to continue...\n");
     get_keyboard_char();
+    clear_screen();
 }
 
 static uint32_t next = 1;  // Seed for the random number generator
@@ -1762,6 +1924,138 @@ void noirtext(const char* filename) {
     clear_screen();
 }
 
+// Add these to your existing definitions
+#define MAX_SCRIPT_SIZE 1024
+#define MAX_VARS 32
+
+// Structure for variables
+struct Variable {
+    char name[32];
+    char value[256];
+};
+
+// Add these global variables
+struct Variable variables[MAX_VARS];
+int var_count = 0;
+
+// Add these new functions
+void set_variable(const char* name, const char* value) {
+    for (int i = 0; i < var_count; i++) {
+        if (strcmp(variables[i].name, name) == 0) {
+            strncpy(variables[i].value, value, 255);
+            return;
+        }
+    }
+    if (var_count < MAX_VARS) {
+        strncpy(variables[var_count].name, name, 31);
+        strncpy(variables[var_count].value, value, 255);
+        var_count++;
+    }
+}
+
+char* get_variable(const char* name) {
+    for (int i = 0; i < var_count; i++) {
+        if (strcmp(variables[i].name, name) == 0) {
+            return variables[i].value;
+        }
+    }
+    return NULL;
+}
+
+int evaluate_condition(const char* condition) {
+    char left[256], op[3], right[256];
+    int parsed = parse_condition(condition, left, op, right);
+    
+    // Get variable values if they exist
+    char* left_val = get_variable(left);
+    char* right_val = get_variable(right);
+    
+    if (left_val) strncpy(left, left_val, 255);
+    if (right_val) strncpy(right, right_val, 255);
+    
+    if (strcmp(op, "==") == 0) return strcmp(left, right) == 0;
+    if (strcmp(op, "!=") == 0) return strcmp(left, right) != 0;
+    return 0;
+}
+// Function declarations
+int is_space(char c);
+char* strtok(char* str, const char* delim);
+char* strchr(const char* str, int c);
+int sscanf(const char* str, const char* format, ...);
+void execute_command(const char* command);
+int evaluate_condition(const char* condition);
+
+// VA args macros
+typedef __builtin_va_list va_list;
+#define va_start(v,l) __builtin_va_start(v,l)
+#define va_end(v) __builtin_va_end(v)
+#define va_arg(v,l) __builtin_va_arg(v,l)
+
+// Helper function implementations
+
+char* strchr(const char* str, int c) {
+    while (*str) {
+        if (*str == (char)c) return (char*)str;
+        str++;
+    }
+    return NULL;
+}
+
+char* strtok(char* str, const char* delim) {
+    static char* last_str = NULL;
+    if (str) last_str = str;
+    if (!last_str) return NULL;
+
+    // Skip leading delimiters
+    while (*last_str && *last_str == *delim) last_str++;
+    if (!*last_str) return NULL;
+
+    char* token_start = last_str;
+    // Find end of token
+    while (*last_str && *last_str != *delim) last_str++;
+    
+    if (*last_str) {
+        *last_str = '\0';
+        last_str++;
+    }
+
+    return token_start;
+}
+
+int sscanf(const char* str, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    
+    int chars_matched = 0;
+    const char* str_ptr = str;
+    
+    while (*format && *str_ptr) {
+        if (*format == '%') {
+            format++;
+            if (*format == 's') {
+                char* s = va_arg(args, char*);
+                while (*str_ptr && !is_space(*str_ptr)) {
+                    *s++ = *str_ptr++;
+                }
+                *s = '\0';
+                chars_matched++;
+            }
+            format++;
+        } else if (is_space(*format)) {
+            // Skip whitespace in both strings
+            while (is_space(*str_ptr)) str_ptr++;
+            while (is_space(*format)) format++;
+        } else {
+            if (*format++ != *str_ptr++) {
+                break;
+            }
+        }
+    }
+    
+    va_end(args);
+    return chars_matched;
+}
+
 void execute_command(const char *command) {
     if (strcmp(command, "clear") == 0) {
         clear_screen();
@@ -1819,7 +2113,6 @@ void execute_command(const char *command) {
     } else if (strcmp(command, "noirtext") == 0) {
         noirtext(NULL);  // No filename provided
     } else if (strcmp(command, "snake") == 0) {
-
         snake_game();
     } else {
         print("Unknown command: ");
