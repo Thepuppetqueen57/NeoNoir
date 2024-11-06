@@ -6,8 +6,21 @@ CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T linker.ld
 
-# Object files
-OBJ = build/boot.o build/kernel.o
+# Directories
+SRC_DIR = src
+BUILD_DIR = build
+
+# Find all source files
+C_SRCS := $(wildcard $(SRC_DIR)/*.c)
+ASM_SRCS := $(wildcard $(SRC_DIR)/*.asm)
+HEADERS := $(wildcard $(SRC_DIR)/*.h)
+
+# Generate object file names
+C_OBJS := $(C_SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+ASM_OBJS := $(ASM_SRCS:$(SRC_DIR)/%.asm=$(BUILD_DIR)/%.o)
+
+# All object files
+OBJ = $(C_OBJS) $(ASM_OBJS)
 
 # Default target
 all: build/noiros.iso
@@ -17,13 +30,13 @@ build:
 	mkdir -p build
 	mkdir -p iso/boot/grub
 
-# Compile kernel
-build/kernel.o: src/kernel.c
-	$(CC) $(CFLAGS) src/kernel.c -o build/kernel.o
+# Compile C files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	$(CC) $(CFLAGS) $< -o $@
 
-# Compile boot code
-build/boot.o: src/boot.asm
-	$(AS) $(ASFLAGS) src/boot.asm -o build/boot.o
+# Compile Assembly files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
+	$(AS) $(ASFLAGS) $< -o $@
 
 # Link everything together
 build/noiros.bin: $(OBJ)
@@ -42,4 +55,8 @@ clean:
 run: build/noiros.iso
 	qemu-system-i386 -cdrom build/noiros.iso -machine pc -enable-kvm -audio alsa
 
-.PHONY: all clean run
+# Print variables for debugging
+print-%:
+	@echo $* = $($*)
+
+.PHONY: all clean run print-%
