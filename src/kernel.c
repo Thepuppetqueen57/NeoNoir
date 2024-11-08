@@ -2137,6 +2137,8 @@ int kernel_main() {
     clear_screen();
     print_banner();
     init_fs();
+    mkdir("root");
+    mkdir("home");
     print_colored("Type 'help' for a list of commands.\n\n", make_color(LIGHT_MAGENTA, BLACK));
     shell();
     return 0;
