@@ -79,6 +79,28 @@ int strlen(const char *str) {
 
 #define NULL 0
 
+const char *strstr(const char *haystack, const char *needle) {
+    if (!*needle) {
+        return haystack;  // If needle is an empty string, return haystack
+    }
+
+    for (; *haystack; haystack++) {
+        const char *h = haystack;
+        const char *n = needle;
+
+        // Check if the substring matches
+        while (*h && *n && (*h == *n)) {
+            h++;
+            n++;
+        }
+
+        if (!*n) {
+            return haystack;  // Found the substring
+        }
+    }
+    return NULL;  // Substring not found
+}
+
 #define MEMORY_POOL_SIZE (1024 * 1024)  // 1 MB memory pool
 
 typedef struct block_meta {
@@ -1215,6 +1237,33 @@ void calc(const char *expression) {
     print("\n");
 }
 
+void search_files(const char *filename) {
+    int found = 0;
+
+    // Helper function to recursively search files
+    void search_in_directory(Directory *dir) {
+        for (int i = 0; i < dir->num_files; i++) {
+            if (strstr(dir->files[i].filename, filename) != NULL) {
+                print(dir->files[i].filename);
+                print("\n");
+                found = 1;
+            }
+
+            // If the file is a directory, search recursively
+            if (dir->files[i].is_directory) {
+                search_in_directory(dir->files[i].dir_ptr);
+            }
+        }
+    }
+
+    // Start searching in the current directory
+    search_in_directory(fs.current_dir);
+
+    if (!found) {
+        print("No files found matching the search term.\n");
+    }
+}
+
 void play_sound(unsigned int frequency);
 void stop_sound(void);
 void sleep(unsigned int milliseconds);
@@ -2171,7 +2220,7 @@ void execute_command(const char *command) {
         print("  ls       - List files and dirs    | cd       - Change directory \n");
         print("  noirtext [filename] - Edit file   | snake    - Play the snake game\n");
         print("  pwd      - Print working dir      | todo [add, list, remove] [task] - ToDo app \n");
-        print("  rm       - Remove file or dir     \n");
+        print("  rm       - Remove file or dir     | search [filename] - Search files\n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -2227,6 +2276,10 @@ void execute_command(const char *command) {
         // Get the filename from the command
         const char *filename = command + 3; // Skip "rm " to get the filename
         remove_file(filename); // Call the remove_file function
+        return;
+    } else if (strncmp(command, "search ", 7) == 0) {
+        const char *search_term = command + 7; // Skip "search " to get the search term
+        search_files(search_term); // Call the search_files function
         return;
     } else {
         print("Unknown command: ");
