@@ -3,14 +3,14 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
-int parse_condition(const char* condition, char* left, char* op, char* right);
+int parse_condition(const char *condition, char *left, char *op, char *right);
 
 int is_space(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
-int parse_condition(const char* condition, char* left, char* op, char* right) {
-    const char* ptr = condition;
+int parse_condition(const char *condition, char *left, char *op, char *right) {
+    const char *ptr = condition;
     int i = 0;
 
     // Parse left operand
@@ -43,9 +43,9 @@ int parse_condition(const char* condition, char* left, char* op, char* right) {
 }
 
 typedef __builtin_va_list va_list;
-#define va_start(v,l) __builtin_va_start(v,l)
+#define va_start(v, l) __builtin_va_start(v, l)
 #define va_end(v) __builtin_va_end(v)
-#define va_arg(v,l) __builtin_va_arg(v,l)
+#define va_arg(v, l) __builtin_va_arg(v, l)
 
 uint32_t rand_range(uint32_t min, uint32_t max);
 
@@ -503,9 +503,8 @@ int mkdir(const char *dirname) {
     // Create a new FileEntry for the directory
     FileEntry *new_entry = &fs.current_dir->files[fs.current_dir->num_files];
     strncpy(new_entry->filename, dirname, MAX_FILENAME);
-    new_entry->size = 0;  // Directories don't have a size in this simple implementation
-    new_entry->start_block =
-        0;  // We'll need to implement block allocation if we add that feature
+    new_entry->size = 0;         // Directories don't have a size in this simple implementation
+    new_entry->start_block = 0;  // We'll need to implement block allocation if we add that feature
     new_entry->is_directory = 1;
 
     // Create a new Directory structure
@@ -983,7 +982,7 @@ FloatNum parse_float(const char **str) {
     int digits = 0;
     int decimal_seen = 0;
     int decimal_places = 0;
-    
+
     // Handle negative numbers
     if (**str == '-') {
         num.is_negative = 1;
@@ -1054,7 +1053,7 @@ FloatNum multiply_float(FloatNum a, FloatNum b) {
 
     int mid = high1 * low2 + high2 * low1;
     result.value = (high1 * high2 * FLOAT_MULTIPLIER) + (mid * 1000) + (low1 * low2 / 1000);
-    
+
     return result;
 }
 
@@ -1079,7 +1078,7 @@ void print_float(FloatNum num) {
     if (num.is_negative) {
         putchar('-');
     }
-    
+
     int integer_part = num.value / FLOAT_MULTIPLIER;
     int fractional_part = num.value % FLOAT_MULTIPLIER;
 
@@ -1540,7 +1539,7 @@ struct Game {
     int game_over;
 };
 
-void init_game(struct Game* game) {
+void init_game(struct Game *game) {
     // Initialize snake in the middle
     game->snake.body[0].x = BOARD_WIDTH / 2;
     game->snake.body[0].y = BOARD_HEIGHT / 2;
@@ -1548,25 +1547,25 @@ void init_game(struct Game* game) {
     game->snake.direction = RIGHT;
     game->score = 0;
     game->game_over = 0;
-    
+
     // Place initial food
     game->food.x = rand_range(0, BOARD_WIDTH - 1);
     game->food.y = rand_range(0, BOARD_HEIGHT - 1);
 }
 
-void draw_board(struct Game* game) {
+void draw_board(struct Game *game) {
     clear_screen();
-    
+
     // Draw border
     for (int i = 0; i < BOARD_WIDTH + 2; i++) {
         print_colored("#", make_color(LIGHT_BLUE, BLACK));
     }
     print("\n");
-    
+
     // Draw game area
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         print_colored("#", make_color(LIGHT_BLUE, BLACK));
-        
+
         for (int x = 0; x < BOARD_WIDTH; x++) {
             int is_snake = 0;
             for (int i = 0; i < game->snake.length; i++) {
@@ -1576,7 +1575,7 @@ void draw_board(struct Game* game) {
                     break;
                 }
             }
-            
+
             if (!is_snake) {
                 if (game->food.x == x && game->food.y == y) {
                     print_colored("*", make_color(LIGHT_RED, BLACK));
@@ -1585,16 +1584,16 @@ void draw_board(struct Game* game) {
                 }
             }
         }
-        
+
         print_colored("#\n", make_color(LIGHT_BLUE, BLACK));
     }
-    
+
     // Draw border
     for (int i = 0; i < BOARD_WIDTH + 2; i++) {
         print_colored("#", make_color(LIGHT_BLUE, BLACK));
     }
     print("\n");
-    
+
     // Draw score
     print("Score: ");
     char score_str[10];
@@ -1608,45 +1607,52 @@ void draw_board(struct Game* game) {
     print("\n");
 }
 
-void update_snake(struct Game* game) {
+void update_snake(struct Game *game) {
     // Save current head position
     struct Point new_head = game->snake.body[0];
-    
+
     // Update head position based on direction
     switch (game->snake.direction) {
-        case UP:    new_head.y--; break;
-        case DOWN:  new_head.y++; break;
-        case LEFT:  new_head.x--; break;
-        case RIGHT: new_head.x++; break;
+        case UP:
+            new_head.y--;
+            break;
+        case DOWN:
+            new_head.y++;
+            break;
+        case LEFT:
+            new_head.x--;
+            break;
+        case RIGHT:
+            new_head.x++;
+            break;
     }
-    
+
     // Check for collisions with walls
-    if (new_head.x < 0 || new_head.x >= BOARD_WIDTH ||
-        new_head.y < 0 || new_head.y >= BOARD_HEIGHT) {
+    if (new_head.x < 0 || new_head.x >= BOARD_WIDTH || new_head.y < 0 ||
+        new_head.y >= BOARD_HEIGHT) {
         game->game_over = 1;
         return;
     }
-    
+
     // Check for collisions with self
     for (int i = 0; i < game->snake.length; i++) {
-        if (new_head.x == game->snake.body[i].x &&
-            new_head.y == game->snake.body[i].y) {
+        if (new_head.x == game->snake.body[i].x && new_head.y == game->snake.body[i].y) {
             game->game_over = 1;
             return;
         }
     }
-    
+
     // Move body
     for (int i = game->snake.length - 1; i > 0; i--) {
-        game->snake.body[i] = game->snake.body[i-1];
+        game->snake.body[i] = game->snake.body[i - 1];
     }
     game->snake.body[0] = new_head;
-    
+
     // Check for food
     if (new_head.x == game->food.x && new_head.y == game->food.y) {
         game->score += 10;
         game->snake.length++;
-        
+
         // Place new food
         game->food.x = rand_range(0, BOARD_WIDTH - 1);
         game->food.y = rand_range(0, BOARD_HEIGHT - 1);
@@ -1656,43 +1662,40 @@ void update_snake(struct Game* game) {
 void snake_game() {
     struct Game game;
     init_game(&game);
-    
+
     print_colored("Snake Game! Use WASD to move, Q to quit\n", make_color(LIGHT_CYAN, BLACK));
     print("Press any key to start...\n");
     get_keyboard_char();
-    
+
     while (!game.game_over) {
         draw_board(&game);
-        
+
         // Handle input
         char input = get_keyboard_char();
         switch (input) {
             case 'w':
-                if (game.snake.direction != DOWN)
-                    game.snake.direction = UP;
+                if (game.snake.direction != DOWN) game.snake.direction = UP;
                 break;
             case 's':
-                if (game.snake.direction != UP)
-                    game.snake.direction = DOWN;
+                if (game.snake.direction != UP) game.snake.direction = DOWN;
                 break;
             case 'a':
-                if (game.snake.direction != RIGHT)
-                    game.snake.direction = LEFT;
+                if (game.snake.direction != RIGHT) game.snake.direction = LEFT;
                 break;
             case 'd':
-                if (game.snake.direction != LEFT)
-                    game.snake.direction = RIGHT;
+                if (game.snake.direction != LEFT) game.snake.direction = RIGHT;
                 break;
             case 'q':
                 return;
         }
-        
+
         update_snake(&game);
-        
+
         // Add a small delay
-        for (volatile int i = 0; i < 1000000; i++) {}
+        for (volatile int i = 0; i < 1000000; i++) {
+        }
     }
-    
+
     print_colored("\nGame Over!\n", make_color(LIGHT_RED, BLACK));
     print_colored("Final Score: ", make_color(LIGHT_GREEN, BLACK));
     char score_str[10];
@@ -1807,13 +1810,13 @@ char text_buffer[MAX_LINES][MAX_LINE_LENGTH];
 int current_line = 0;
 int num_lines = 0;
 
-void noirtext(const char* filename) {
+void noirtext(const char *filename) {
     clear_screen();
     print_colored("Welcome to NoirText!\n", make_color(LIGHT_CYAN, BLACK));
     print_colored("Commands: :w to save, :q to quit\n\n", make_color(LIGHT_GREEN, BLACK));
 
     // Load file content if it exists
-    FileEntry* file = NULL;
+    FileEntry *file = NULL;
     if (filename) {
         for (int i = 0; i < fs.current_dir->num_files; i++) {
             if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
@@ -1821,9 +1824,9 @@ void noirtext(const char* filename) {
                 break;
             }
         }
-        
+
         if (file) {
-            char* content = (char*)file->start_block;
+            char *content = (char *)file->start_block;
             int line = 0;
             int col = 0;
             for (size_t i = 0; i < file->size && line < MAX_LINES; i++) {
@@ -1873,29 +1876,30 @@ void noirtext(const char* filename) {
                 // Calculate total content size
                 size_t total_size = 0;
                 for (int i = 0; i < num_lines; i++) {
-                    total_size += strlen(text_buffer[i]) + 1; // +1 for newline
+                    total_size += strlen(text_buffer[i]) + 1;  // +1 for newline
                 }
 
                 // Allocate memory for file content
-                char* content = (char*)malloc(total_size + 1); // +1 for null terminator
+                char *content = (char *)malloc(total_size + 1);  // +1 for null terminator
                 if (content == NULL) {
-                    print_colored("Error: Failed to allocate memory for file content\n", make_color(LIGHT_RED, BLACK));
+                    print_colored("Error: Failed to allocate memory for file content\n",
+                                  make_color(LIGHT_RED, BLACK));
                     continue;
                 }
 
                 // Copy content to file
-                char* ptr = content;
+                char *ptr = content;
                 for (int i = 0; i < num_lines; i++) {
                     size_t line_len = strlen(text_buffer[i]);
                     memcpy(ptr, text_buffer[i], line_len);
                     ptr += line_len;
                     *ptr++ = '\n';
                 }
-                *ptr = '\0'; // Null terminate the content
+                *ptr = '\0';  // Null terminate the content
 
                 // Update file entry
                 if (file->start_block != 0) {
-                    free((void*)file->start_block);
+                    free((void *)file->start_block);
                 }
                 file->start_block = (uint32_t)content;
                 file->size = total_size;
@@ -1939,7 +1943,7 @@ struct Variable variables[MAX_VARS];
 int var_count = 0;
 
 // Add these new functions
-void set_variable(const char* name, const char* value) {
+void set_variable(const char *name, const char *value) {
     for (int i = 0; i < var_count; i++) {
         if (strcmp(variables[i].name, name) == 0) {
             strncpy(variables[i].value, value, 255);
@@ -1953,7 +1957,7 @@ void set_variable(const char* name, const char* value) {
     }
 }
 
-char* get_variable(const char* name) {
+char *get_variable(const char *name) {
     for (int i = 0; i < var_count; i++) {
         if (strcmp(variables[i].name, name) == 0) {
             return variables[i].value;
@@ -1962,47 +1966,47 @@ char* get_variable(const char* name) {
     return NULL;
 }
 
-int evaluate_condition(const char* condition) {
+int evaluate_condition(const char *condition) {
     char left[256], op[3], right[256];
     int parsed = parse_condition(condition, left, op, right);
-    
+
     // Get variable values if they exist
-    char* left_val = get_variable(left);
-    char* right_val = get_variable(right);
-    
+    char *left_val = get_variable(left);
+    char *right_val = get_variable(right);
+
     if (left_val) strncpy(left, left_val, 255);
     if (right_val) strncpy(right, right_val, 255);
-    
+
     if (strcmp(op, "==") == 0) return strcmp(left, right) == 0;
     if (strcmp(op, "!=") == 0) return strcmp(left, right) != 0;
     return 0;
 }
 // Function declarations
 int is_space(char c);
-char* strtok(char* str, const char* delim);
-char* strchr(const char* str, int c);
-int sscanf(const char* str, const char* format, ...);
-void execute_command(const char* command);
-int evaluate_condition(const char* condition);
+char *strtok(char *str, const char *delim);
+char *strchr(const char *str, int c);
+int sscanf(const char *str, const char *format, ...);
+void execute_command(const char *command);
+int evaluate_condition(const char *condition);
 
 // VA args macros
 typedef __builtin_va_list va_list;
-#define va_start(v,l) __builtin_va_start(v,l)
+#define va_start(v, l) __builtin_va_start(v, l)
 #define va_end(v) __builtin_va_end(v)
-#define va_arg(v,l) __builtin_va_arg(v,l)
+#define va_arg(v, l) __builtin_va_arg(v, l)
 
 // Helper function implementations
 
-char* strchr(const char* str, int c) {
+char *strchr(const char *str, int c) {
     while (*str) {
-        if (*str == (char)c) return (char*)str;
+        if (*str == (char)c) return (char *)str;
         str++;
     }
     return NULL;
 }
 
-char* strtok(char* str, const char* delim) {
-    static char* last_str = NULL;
+char *strtok(char *str, const char *delim) {
+    static char *last_str = NULL;
     if (str) last_str = str;
     if (!last_str) return NULL;
 
@@ -2010,10 +2014,10 @@ char* strtok(char* str, const char* delim) {
     while (*last_str && *last_str == *delim) last_str++;
     if (!*last_str) return NULL;
 
-    char* token_start = last_str;
+    char *token_start = last_str;
     // Find end of token
     while (*last_str && *last_str != *delim) last_str++;
-    
+
     if (*last_str) {
         *last_str = '\0';
         last_str++;
@@ -2022,18 +2026,23 @@ char* strtok(char* str, const char* delim) {
     return token_start;
 }
 
-int sscanf(const char* str, const char* format, ...) {
+void pwd() {
+    print(fs.current_dir->name);
+    print("\n");
+}
+
+int sscanf(const char *str, const char *format, ...) {
     va_list args;
     va_start(args, format);
-    
+
     int chars_matched = 0;
-    const char* str_ptr = str;
-    
+    const char *str_ptr = str;
+
     while (*format && *str_ptr) {
         if (*format == '%') {
             format++;
             if (*format == 's') {
-                char* s = va_arg(args, char*);
+                char *s = va_arg(args, char *);
                 while (*str_ptr && !is_space(*str_ptr)) {
                     *s++ = *str_ptr++;
                 }
@@ -2051,7 +2060,7 @@ int sscanf(const char* str, const char* format, ...) {
             }
         }
     }
-    
+
     va_end(args);
     return chars_matched;
 }
@@ -2072,6 +2081,7 @@ void execute_command(const char *command) {
         print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
         print("  ls       - List files and dirs    | cd       - Change directory \n");
         print("  noirtext [filename] - Edit file   | snake    - Play the snake game\n");
+        print("  pwd      - Print working dir \n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -2114,6 +2124,8 @@ void execute_command(const char *command) {
         noirtext(NULL);  // No filename provided
     } else if (strcmp(command, "snake") == 0) {
         snake_game();
+    } else if (strcmp(command, "pwd") == 0) {
+        pwd();
     } else {
         print("Unknown command: ");
         print(command);
@@ -2127,7 +2139,12 @@ void shell() {
         print_colored("root", make_color(LIGHT_GREEN, BLACK));
         print_colored("@", make_color(WHITE, BLACK));
         print_colored("noiros", make_color(LIGHT_CYAN, BLACK));
+
+        // Show the current directory in the prompt
+        print_colored(" ", make_color(WHITE, BLACK));
+        print(fs.current_dir->name);
         print_colored(" # ", make_color(LIGHT_RED, BLACK));
+
         read_line(command, sizeof(command));
         execute_command(command);
     }
