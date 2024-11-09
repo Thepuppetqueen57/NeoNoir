@@ -457,7 +457,7 @@ void load_fs() {
 // FS Commands
 
 int touch(const char *filename) {
-    return create_file(filename, NULL);  // Pass NULL for empty file
+    return create_file(filename, "");  // Pass for empty file
 }
 
 void cat(const char *filename) {
@@ -2119,9 +2119,9 @@ void execute_command(const char *command) {
     } else if (strncmp(command, "cd ", 3) == 0) {
         cd(command + 3);
     } else if (strncmp(command, "noirtext ", 9) == 0) {
-        noirtext(command + 9);  // Pass filename if provided
+        noirtext(command + 9);
     } else if (strcmp(command, "noirtext") == 0) {
-        noirtext(NULL);  // No filename provided
+        noirtext(NULL);
     } else if (strcmp(command, "snake") == 0) {
         snake_game();
     } else if (strcmp(command, "pwd") == 0) {
@@ -2154,8 +2154,10 @@ int kernel_main() {
     clear_screen();
     print_banner();
     init_fs();
-    mkdir("root");
-    mkdir("home");
+    mkdir("Home");
+    mkdir("My Files");
+    mkdir("Temporary Files");
+    mkdir("Text Files");    
     print_colored("Type 'help' for a list of commands.\n\n", make_color(LIGHT_MAGENTA, BLACK));
     shell();
     return 0;
