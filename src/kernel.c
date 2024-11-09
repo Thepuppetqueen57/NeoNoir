@@ -474,6 +474,26 @@ void load_fs() {
     memcpy(&fs, disk, sizeof(FileSystem));
 }
 
+// Function to remove a file
+int remove_file(const char *filename) {
+    // Search for the file in the current directory
+    for (int i = 0; i < fs.current_dir->num_files; i++) {
+        if (strcmp(fs.current_dir->files[i].filename, filename) == 0) {
+            // Free the memory associated with the file
+            free((void *)fs.current_dir->files[i].start_block);
+            
+            // Shift the remaining files in the directory
+            for (int j = i; j < fs.current_dir->num_files - 1; j++) {
+                fs.current_dir->files[j] = fs.current_dir->files[j + 1];
+            }
+            fs.current_dir->num_files--;
+            return 0; // Success
+        }
+    }
+    print("Error: File not found.\n");
+    return -1; // File not found
+}
+
 // End of Filesystem
 
 // FS Commands
@@ -2150,7 +2170,8 @@ void execute_command(const char *command) {
         print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
         print("  ls       - List files and dirs    | cd       - Change directory \n");
         print("  noirtext [filename] - Edit file   | snake    - Play the snake game\n");
-        print("  pwd      - Print working dir      | todo [add, list, remove] [task] - To-Do app \n");
+        print("  pwd      - Print working dir      | todo [add, list, remove] [task] - ToDo app \n");
+        print("  rm       - Remove file or dir     \n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -2202,6 +2223,11 @@ void execute_command(const char *command) {
     } else if (strncmp(command, "todo remove ", 12) == 0) {
         int task_number = atoi(command + 12) - 1; // Convert to zero-based index
         remove_todo(task_number);
+    } else if (strncmp(command, "rm ", 3) == 0) {
+        // Get the filename from the command
+        const char *filename = command + 3; // Skip "rm " to get the filename
+        remove_file(filename); // Call the remove_file function
+        return;
     } else {
         print("Unknown command: ");
         print(command);
