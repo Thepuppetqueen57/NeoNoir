@@ -379,7 +379,8 @@ void init_fs() {
     strncpy(fs.root.name, "/", MAX_FILENAME);
     fs.root.start_block = 1;  // Start after the metadata
     fs.root.num_files = 0;
-    fs.current_dir = &fs.root;
+    fs.root.parent = NULL;  // Root has no parent
+    fs.current_dir = &fs.root;  // Set current directory to root
 }
 
 int create_file(const char *filename, const char *content) {
@@ -503,8 +504,7 @@ int mkdir(const char *dirname) {
     // Create a new FileEntry for the directory
     FileEntry *new_entry = &fs.current_dir->files[fs.current_dir->num_files];
     strncpy(new_entry->filename, dirname, MAX_FILENAME);
-    new_entry->size = 0;         // Directories don't have a size in this simple implementation
-    new_entry->start_block = 0;  // We'll need to implement block allocation if we add that feature
+    new_entry->size = 0;  // Directories don't have a size in this simple implementation
     new_entry->is_directory = 1;
 
     // Create a new Directory structure
@@ -515,9 +515,9 @@ int mkdir(const char *dirname) {
     }
 
     strncpy(new_dir->name, dirname, MAX_FILENAME);
-    new_dir->start_block = 0;  // We'll need to implement block allocation if we add that feature
+    new_dir->start_block = 0;
     new_dir->num_files = 0;
-    new_dir->parent = fs.current_dir;
+    new_dir->parent = fs.current_dir;  // Set the parent to the current directory
 
     new_entry->dir_ptr = new_dir;
 
@@ -545,7 +545,7 @@ int cd(const char *dirname) {
     for (int i = 0; i < fs.current_dir->num_files; i++) {
         if (strcmp(fs.current_dir->files[i].filename, dirname) == 0) {
             if (fs.current_dir->files[i].is_directory) {
-                fs.current_dir = fs.current_dir->files[i].dir_ptr;
+                fs.current_dir = fs.current_dir->files[i].dir_ptr;  // Change to the new directory
                 return 0;
             } else {
                 return -1;  // Not a directory
