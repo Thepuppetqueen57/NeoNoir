@@ -3,6 +3,28 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
+int atoi(const char *str) {
+    int num = 0;
+    int sign = 1;
+
+    // Skip whitespace
+    while (*str == ' ') str++;
+
+    // Handle negative numbers
+    if (*str == '-') {
+        sign = -1;
+        str++;
+    }
+
+    // Convert string to integer
+    while (*str >= '0' && *str <= '9') {
+        num = num * 10 + (*str - '0');
+        str++;
+    }
+
+    return num * sign;
+}
+
 int parse_condition(const char *condition, char *left, char *op, char *right);
 
 int is_space(char c) {
@@ -1981,6 +2003,53 @@ int evaluate_condition(const char *condition) {
     if (strcmp(op, "!=") == 0) return strcmp(left, right) != 0;
     return 0;
 }
+
+#define MAX_TODO 100
+
+typedef struct {
+    char task[256];
+} TodoItem;
+
+TodoItem todo_list[MAX_TODO];
+int todo_count = 0;
+
+void add_todo(const char *task) {
+    if (todo_count < MAX_TODO) {
+        strncpy(todo_list[todo_count].task, task, 256);
+        todo_count++;
+        print("Task added.\n");
+    } else {
+        print("Error: To-do list is full.\n");
+    }
+}
+
+void list_todos() {
+    if (todo_count == 0) {
+        print("No tasks in the to-do list.\n");
+        return;
+    }
+
+    print("To-do list:\n");
+    for (int i = 0; i < todo_count; i++) {
+        print("  ");
+        print(todo_list[i].task);
+        print("\n");
+    }
+}
+
+void remove_todo(int index) {
+    if (index < 0 || index >= todo_count) {
+        print("Error: Invalid task number.\n");
+        return;
+    }
+
+    for (int i = index; i < todo_count - 1; i++) {
+        todo_list[i] = todo_list[i + 1];
+    }
+    todo_count--;
+    print("Task removed.\n");
+}
+
 // Function declarations
 int is_space(char c);
 char *strtok(char *str, const char *delim);
@@ -2081,7 +2150,7 @@ void execute_command(const char *command) {
         print("  cat      - Show contents of file  | mkdir    - Create a directory\n");
         print("  ls       - List files and dirs    | cd       - Change directory \n");
         print("  noirtext [filename] - Edit file   | snake    - Play the snake game\n");
-        print("  pwd      - Print working dir \n");
+        print("  pwd      - Print working dir      | todo [add, list, remove] [task] - To-Do app \n");
     } else if (strcmp(command, "shutdown") == 0) {
         shutdown();
     } else if (strcmp(command, "reboot") == 0) {
@@ -2126,6 +2195,13 @@ void execute_command(const char *command) {
         snake_game();
     } else if (strcmp(command, "pwd") == 0) {
         pwd();
+    } else if (strncmp(command, "todo add ", 9) == 0) {
+        add_todo(command + 9);
+    } else if (strcmp(command, "todo list") == 0) {
+        list_todos();
+    } else if (strncmp(command, "todo remove ", 12) == 0) {
+        int task_number = atoi(command + 12) - 1; // Convert to zero-based index
+        remove_todo(task_number);
     } else {
         print("Unknown command: ");
         print(command);
