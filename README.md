@@ -1,8 +1,8 @@
-# NoirOS
+# NeoNoir
 
-NoirOS is a simple operating system written in C.
+NeoNoir is a fork of NoirOS meant to be better and more actively worked on than NoirOS
 
-## Running the OS
+## Running NeoNoir
 
 Run:
 
