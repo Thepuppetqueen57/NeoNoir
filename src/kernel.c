@@ -866,7 +866,7 @@ int memcmp(const void *s1, const void *s2, int n) {
 
 // Main shutdown function
 void shutdown() {
-    print("Initiating NoirOS advanced shutdown sequence...\n");
+    print("Initiating NeoNoir advanced shutdown sequence...\n");
 
     // 1. Try ACPI shutdown
     print("Attempting ACPI shutdown...\n");
@@ -1567,7 +1567,7 @@ void time() {
 }
 
 void reboot() {
-    print("Rebooting NoirOS...\n");
+    print("Rebooting NeoNoir...\n");
     print("Please wait while the system restarts...\n");
 
     // Wait for keyboard buffer to empty
@@ -1594,7 +1594,7 @@ void echo(const char *str) {
 }
 
 void print_system_info() {
-    print("NoirOS v1.0\n");
+    print("NeoNoir v1.0\n");
     print("Architecture: x86, 32 Bit\n");
     print("Memory: 640KB Base Memory\n");
     print("Display: VGA Text Mode 80x26\n");
@@ -1605,7 +1605,7 @@ void whoami() {
 }
 
 void hostname() {
-    print("noiros\n");
+    print("NeoNoir\n");
 }
 
 #define SNAKE_MAX_LENGTH 100
@@ -1891,7 +1891,7 @@ void print_banner() {
     print("  /  |/ / __ \\/ / ___/ / / /\\__ \\ \n");
     print(" / /|  / /_/ / / /  / /_/ /___/ / \n");
     print("/_/ |_/\\____/_/_/   \\____//____/  \n");
-    print_colored("\nWelcome to NoirOS!\n", make_color(LIGHT_CYAN, BLACK));
+    print_colored("\nWelcome to NeoNoir!\n", make_color(LIGHT_CYAN, BLACK));
 }
 
 #define MAX_LINES 100
@@ -2212,7 +2212,7 @@ void execute_command(const char *command) {
         print("  shutdown - Power off the system   | reboot   - Restart the system\n");
         print("  echo [text] - Display the text    | whoami   - Display current user\n");
         print("  hostname - Display system hostname| uname    - Display system information\n");
-        print("  banner   - Display NoirOS banner  | cpuinfo  - Display CPU information\n");
+        print("  banner   - Display NeoNoir banner  | cpuinfo  - Display CPU information\n");
         print("  time     - Display current time   | calc [expression] - Basic calculator\n");
         print("  textgame - Start a game           | play     - Play a silly tune\n");
         print("  fortune  - Display a fortune.     | touch    - Create a file.\n");
@@ -2293,7 +2293,7 @@ void shell() {
     while (1) {
         print_colored("root", make_color(LIGHT_GREEN, BLACK));
         print_colored("@", make_color(WHITE, BLACK));
-        print_colored("noiros", make_color(LIGHT_CYAN, BLACK));
+        print_colored("NeoNoir", make_color(LIGHT_CYAN, BLACK));
 
         // Show the current directory in the prompt
         print_colored(" ", make_color(WHITE, BLACK));
